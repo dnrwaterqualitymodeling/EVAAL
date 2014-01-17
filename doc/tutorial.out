@@ -1,0 +1,15 @@
+\BOOKMARK [1][-]{section.1}{Preparation}{}% 1
+\BOOKMARK [1][-]{section.2}{Tools}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Condition the DEM}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Identify Internally Draining Areas}{section.2}% 4
+\BOOKMARK [3][-]{subsubsection.2.2.1}{Prepare Precipitation Data}{subsection.2.2}% 5
+\BOOKMARK [3][-]{subsubsection.2.2.2}{Create a curve number raster}{subsection.2.2}% 6
+\BOOKMARK [3][-]{subsubsection.2.2.3}{Run the tool}{subsection.2.2}% 7
+\BOOKMARK [2][-]{subsection.2.3}{Recondition DEM for Internally draining Areas}{section.2}% 8
+\BOOKMARK [2][-]{subsection.2.4}{Calculate Stream Power Index}{section.2}% 9
+\BOOKMARK [2][-]{subsection.2.5}{Calculate Soil Loss Using the Universal Soil Loss Equation \(USLE\)}{section.2}% 10
+\BOOKMARK [3][-]{subsubsection.2.5.1}{Overview of the USLE}{subsection.2.5}% 11
+\BOOKMARK [3][-]{subsubsection.2.5.2}{Prepare GIS datasets}{subsection.2.5}% 12
+\BOOKMARK [3][-]{subsubsection.2.5.3}{Run the tool}{subsection.2.5}% 13
+\BOOKMARK [2][-]{subsection.2.6}{Calculate Erosion Score}{section.2}% 14
+\BOOKMARK [1][-]{section.3}{Interpretation and Limitations}{}% 15

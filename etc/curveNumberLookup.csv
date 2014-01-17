@@ -1,0 +1,70 @@
+COVER_CODE,COVER_TYPE,TREATMENT,HYDROLOGIC_CONDITION,A,B,C,D
+1,Open Space,,Poor,68,79,86,89
+1,Open Space,,Fair,49,69,79,84
+1,Open Space,,Good,39,61,74,80
+2,Paved parking lots,,,98,98,98,98
+3,Streets and roads,,curbs and storm sewers,98,98,98,98
+3,Streets and roads,,open ditches,83,89,92,93
+3,Streets and roads,,gravel,76,85,89,91
+3,Streets and roads,,dirt,72,82,87,89
+4,Commercial and business,,,89,92,94,95
+5,Industrial,,,81,88,91,93
+6,Residential 1/8 acre or less,,,77,85,90,92
+7,Residential 1/4 acre or less,,,61,75,83,87
+8,Residential 1/3 acre or less,,,57,72,81,86
+9,Residential 1/2 acre or less,,,54,70,80,85
+10,Residential 1 acre or less,,,51,68,79,84
+11,Residential 2 acre or less,,,46,65,77,82
+12,Newly graded areas,,,77,86,91,94
+13,Fallow,BS,,77,86,91,94
+13,Fallow,CR,Poor,76,85,90,93
+13,Fallow,CR,Good,74,83,88,90
+14,Row crops,SR,Poor,72,81,88,91
+14,Row crops,SR,Good,67,78,85,89
+14,Row crops,SRCR,Poor,71,80,87,90
+14,Row crops,SRCR,Good,64,75,82,85
+14,Row crops,C,Poor,70,79,84,88
+14,Row crops,C,Good,65,75,82,86
+14,Row crops,CCR,Poor,69,78,83,87
+14,Row crops,CCR,Good,64,74,81,85
+14,Row crops,CT,Poor,66,74,80,82
+14,Row crops,CT,Good,62,71,78,81
+14,Row crops,CTCR,Poor,65,73,79,81
+14,Row crops,CTCR,Good,61,70,77,80
+15,Small grain,SR,Poor,65,76,84,88
+15,Small grain,SR,Good,63,75,83,87
+15,Small grain,SRCR,Poor,64,75,83,86
+15,Small grain,SRCR,Good,60,72,80,84
+15,Small grain,C,Poor,63,74,82,85
+15,Small grain,C,Good,61,73,81,84
+15,Small grain,CCR,Poor,62,73,81,84
+15,Small grain,CCR,Good,60,72,80,83
+15,Small grain,CT,Poor,61,72,79,82
+15,Small grain,CT,Good,59,70,78,81
+15,Small grain,CTCR,Poor,60,71,78,81
+15,Small grain,CTCR,Good,58,69,77,80
+16,Close-seeded or broadcast legumes or rotation meadow,SR,Poor,66,77,85,89
+16,Close-seeded or broadcast legumes or rotation meadow,SR,Good,58,72,81,85
+16,Close-seeded or broadcast legumes or rotation meadow,C,Poor,64,75,83,85
+16,Close-seeded or broadcast legumes or rotation meadow,C,Good,55,69,78,83
+16,Close-seeded or broadcast legumes or rotation meadow,CT,Poor,63,73,80,83
+16,Close-seeded or broadcast legumes or rotation meadow,CT,Good,51,67,76,80
+17,Pasture,,Poor,68,79,86,89
+17,Pasture,,Fair,49,69,79,84
+17,Pasture,,Good,39,61,74,80
+18,Meadow (protected from grazing but mowed for hay),,,30,58,71,78
+19,Brush,,Poor,48,67,77,83
+19,Brush,,Fair,35,56,70,77
+19,Brush,,Good,30,48,65,73
+20,Woods-grass combination (orchard or tree farm),,,57,73,82,86
+20,Woods-grass combination (orchard or tree farm),,,43,65,76,82
+20,Woods-grass combination (orchard or tree farm),,,32,58,72,79
+21,Woods,,Poor,45,66,77,83
+21,Woods,,Fair,36,60,73,79
+21,Woods,,Good,30,55,70,77
+22,Farmsteads,,,59,74,82,86
+23,Open Water,,,100,100,100,100
+24,Emergent wetlands,,,85,85,85,96
+25,Wooded wetlands,,,85,85,85,96
+26,Grassland,,,30,53,71,78
+27,Barren,,,77,86,91,94

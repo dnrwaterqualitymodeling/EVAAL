@@ -1,0 +1,191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Aaron Ruesch, Sarah Kempen, and Theresa NelsonWisconsin Department of Natural Resources,101 S. Webster St.Madison, WI 53707-7921Aaron.Ruesch@wisconsin.gov" />
+  <title>Calculating a LiDAR-based &quot;Erosion Score&quot;: An ArcGIS Toolbox Tutorial</title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+<div id="header">
+<h1 class="title">Calculating a LiDAR-based &quot;Erosion Score&quot;: An ArcGIS Toolbox Tutorial</h1>
+<h2 class="author">Aaron Ruesch, Sarah Kempen, and Theresa Nelson<br />Wisconsin Department of Natural Resources,<br />101 S. Webster St.<br />Madison, WI 53707-7921<br /><a href="Aaron.Ruesch@wisconsin.gov">Aaron.Ruesch@wisconsin.gov</a></h2>
+</div>
+<p>This document is a tutorial describing the steps required to calculate a spatially explicit erosion score based on a LiDAR digital elevation model (DEM). The erosion score is a bivariate index describing a landscape’s relative vulnerability to sheet, rill, and gully erosion by incorporating information regarding topography, soils, rainfall, and land cover. The tools are intended for relatively small watersheds (less than 100 sq. km.) that have already been identified as watersheds that contribute higher non-point-source pollutant loads. For example, a hydrologic unit (HUC) that has been identified in a Total Maximum Daily Load (TMDL) model as a critical source area would be an appropriate place to use this tool. Presuming that the TMDL model has accurately identified the watershed as a pollutant source, we can further refine the prioritization to specific fields or sub-watersheds within the HUC12. With this framework, the intention is to prioritize the implementation of best-management practices on fields where pollutant loads are estimated to be the highest, thereby increasing the probability of improving downstream water quality using the fewest resources (i.e., &quot;bang-for-buck&quot; implementation).</p>
+<h1>Preparation</h1>
+<p>The tools were built for Wisconsin landscapes, and thus use data specific to Wisconsin, including post-processed LiDAR DEMs distributed by <a href="http://relief.ersc.wisc.edu/wisconsinview/form.php">WisconsinView</a><sup><a href="#fn1" class="footnoteRef" id="fnref1">1</a></sup>[wisconsinViewWebsite] and Wisconsin-specific coordinate systems (Wisconsin Transverse Mercator). In terms of software, the tools require ArcGIS 10.0 or later, the Spatial Analyst extension, and an optimized DEM fill tool that can be downloaded <a href="http://tools.crwr.utexas.edu/OptimizedPitRemoval/Optimized-Pit-Removal-V1.5.1.zip">here</a><sup><a href="#fn2" class="footnoteRef" id="fnref2">2</a></sup>. In terms of data, you will need LiDAR data downloaded from <a href="http://relief.ersc.wisc.edu/wisconsinview/form.php">WisconsinView</a>, a feature class polygon for the boundary of your area of interest (recommended smaller than 100 sq. km.), <a href="http://www.mrlc.gov/nlcd06_data.php">NLCD land-cover data</a><sup><a href="#fn3" class="footnoteRef" id="fnref3">3</a></sup>[nlcdWebsite], <a href="http://datagateway.nrcs.usda.gov/GDGOrder.aspx?order=QuickState">gSSURGO soils data</a><sup><a href="#fn4" class="footnoteRef" id="fnref4">4</a></sup>[nrcsWebsite], and optionally, the <a href="http://www.fsa.usda.gov/FSA/apfoapp?area=home&amp;subject=prod&amp;topic=clu">USDA common land unit dataset (CLU)</a><sup><a href="#fn5" class="footnoteRef" id="fnref5">5</a></sup>. To download the CLU dataset, you must be a FSA/NRCS/RD<sup><a href="#fn6" class="footnoteRef" id="fnref6">6</a></sup> employee. If you are not employed by one of these agencies, you may use an alternate boundary for summarization (e.g., parcels, sub-watersheds). Running the tools will likely require a moderate-to-high level of familiarity with GIS concepts and ArcGIS Desktop software.</p>
+<ol>
+<li><p><em>Load the tools into ArcGIS</em>: Open ArcMap. Navigate to ArcToolbox. Right-click on then click . Navigate to the file stored in the root directory of the distributed toolbox.</p></li>
+<li><p><em>Define an area of interest</em>: The area of interest, for the purpose of water quality improvement, will likely be a watershed boundary, and therefore will be referred to as the &quot;watershed&quot; within this document. Watershed boundaries are available on the internet through USGS—the finest-scale watershed boundaries that are available are <a href="http://water.usgs.gov/GIS/huc.html">Hydrologic Unit Codes level 12 (HUC12s)</a><sup><a href="#fn7" class="footnoteRef" id="fnref7">7</a></sup>. The DNR has an internal version of HUC16 delineations that is available upon request. If no watershed boundary exists, you can manually digitize a boundary using the LiDAR DEM or contours if they are availabe.</p></li>
+<li><p><em>Download the gSSURGO soils database</em>: Go to the NRCS <a href="http://datagateway.nrcs.usda.gov/GDGOrder.aspx?order=QuickState">GeoSpatialDataGateway</a> ’Order by State’ website. Under , choose . You will be prompted to select a dataset—scroll down to and choose and click , then again. Fill in the form with your personal information and click and . An email will be sent to you when your order is ready. Find the FTP site in the email, download the associated zip file, and unzip it. There will be another zip file in the resulting directory—unzip that as well and note the location of .</p></li>
+<li><p><em>Download the NLCD2006 land-cover raster</em>: Go to the <a href="http://www.mrlc.gov/nlcd06_data.php">Multi-Resolution Land Characteristics Consortium (MRLC)</a> download website for NLCD2006 and click the top link under labeled . The data should immediately begin downloading. When the download is complete, unzip the file and note the location of .</p></li>
+<li><p><em>Download LiDAR DEM(s)</em>: Go to the <a href="http://relief.ersc.wisc.edu/wisconsinview/form.php">WisconsinView Data Portal</a> (see link on page . If this is your first time visiting the WisconsinView Data Portal, fill in the form at the bottom of the page with your personal information, click , accept the disclaimer, and click . Click the county(s) where your watershed is located. This will direct you to an FTP site—click the zip file in the top level directory. Unzip the file and note the location where the resulting directory was stored.</p></li>
+</ol>
+<h1>Tools</h1>
+<h2>Condition the DEM</h2>
+<p>To properly describe how water moves across your watershed, we must first &quot;condition&quot; the DEM (methods based on <span class="citation"></span>), which means to remove presumed errors in elevation so that the GIS model of hydrology can correctly infer the direction of flow based on changes in elevation.</p>
+<p>One of the major barriers in this process is correctly modeling the flow of water through culverts and bridges. Therefore, we have to first manually digitize all culverts and bridges in our watershed where flowpaths are not properly reprsented by the DEM. The majority of these cases will occur where road berms were built. These topographies create &quot;digital dams&quot; that prevent the hydrologic model from appropriately describing downslope flow.</p>
+<p>To eliminate digital dams, we will digitize each culvert as a polyline feature following these steps (see Figure  [fig:digitizingCulverts]):</p>
+<ol>
+<li><p>Create a &quot;filled&quot; DEM using the tool in ArcGIS Spatial Analyst and subtract the original DEM from the filled DEM to create a raster of the depression depths. Alternatively, you can type this snippet of code into the ArcGIS Desktop Python window (<img src="pythonIcon.png" alt="image" />):<br /><br /><code>from arcpy.sa import *</code><br /><code>dem = &quot;C:/path/to/dem&quot;</code><br /><code>depressionDepth = &quot;C:/path/to/depressionDepth&quot;</code><br /><code>depressionDepth = Fill(dem) - Raster(dem)</code><br /><code>depressionDepth.save(depressionDepth)</code><br /><br />replacing <code>&quot;C:/path/to/dem&quot;</code> and <code>&quot;C:/path/to/depressionDepth&quot;</code> with the file paths for your LiDAR DEM and the output raster for inferring where depressions lie.</p></li>
+<li><p>Deep depressions near road berms are places where a culvert is probably located. Locate one of these depressions using the depression-depth raster from above, then zoom to it.</p></li>
+<li><p>To visualize digital dams, open the tab in the window for the original DEM. Choose the option using within the box, and choose a color gradient that spans multiple hues (e.g., a rainbow color scheme).</p></li>
+<li><p>Create an empty polyline feature class.</p></li>
+<li><p>Start an editing session on the empty polyline feature class.</p></li>
+<li><p>Each polyline feature should only have two nodes. The nodes need to be drawn in order, from upstream to downstream, across the digital dam.</p></li>
+<li><p>Use the rainbow-colored DEM to locate the lowest elevation DEM gridcell on the upstream side of the digital dam. Digitize the upstream node on the center of that cell.</p></li>
+<li><p>Next, locate a DEM gridcell on the downstream side of the digital dam that has lower elevation than the gridcell underlying the upstream node. Digitize the downstream node on the center of that cell and finish the feature.</p></li>
+<li><p>Repeat until all digital dams have culvert features spanning across them.</p></li>
+</ol>
+<p>A correctly digitized polyline will inform a DEM interpolation routine that the digital dam should be &quot;cut&quot; along the geometry of the culvert feature according to the slope of the elevation between the DEM gridcells on the up- and downstream side of the digital dam.</p>
+<p>After all culverts have been digitized, open the tool in the toolbox. Add the polyline feature class, the polygon feature class, and the raster dataset that you downloaded from <a href="http://www.wisconsinview.org/">WisconsinView</a>. The tool also asks for the ; after decompressing the downloaded <a href="http://tools.crwr.utexas.edu/OptimizedPitRemoval/Optimized-Pit-Removal-V1.5.1.zip">optimized fill software</a><sup><a href="#fn8" class="footnoteRef" id="fnref8">8</a></sup>, choose the file from the resulting directory. Finally, define an and an . The will be a raster file that has minor errors and digital dams removed. It will have a coarsened cellsize of 3 feet (unless the cell size was manually changed in the ). The will be a DEM that has all &quot;pits&quot; (depressions) removed where water would theoretically pool. That is, the resulting elevation model has no seepages or wetlands that store water—all water runs off.</p>
+<h2>Identify Non-contributing Areas</h2>
+<p>Because the eroded soil that flows into non-contributing areas (also known as &quot;Internally Drained Areas&quot;) does not contribute to water quality problems in terms of suspended solids, these areas will eventually be removed from the erosion score (ES) model. But first, the extent of non-contributing areas must be identified.</p>
+<p>We assume that non-contributing areas are areas where the volume of the depression on the landscape is large enough to store the runoff produced from a precipitation event as large as a specified storm event. To model runoff, we use a &quot;curve number&quot; approach in which the proportion of precipitation that results in runoff is based on land cover and hydrologic soil group.</p>
+<h3>Prepare Precipitation Data</h3>
+<p>To identify non-contributing areas, we need raster precipitation data describing a depth of rain that will be used to define the volume threshold (i.e., capacity) of each non-contributing area. The depth of rain is specified in the tool by the frequency of occurence (in units of years) of a specified duration of storm (in units of hours). For example, a frequency of value 10 and duration of value 24 represents the 10-year 24-hour rainfall event. The tool will automatically download raster data from NOAA’s <a href="http://dipper.nws.noaa.gov/hdsc/pfds/">Precipitation Frequency Data Server</a><sup><a href="#fn9" class="footnoteRef" id="fnref9">9</a></sup>. The resulting precipitation raster will be in thousandths of inches</p>
+<p>In ArcToolbox, expand the toolbox and double-click the script tool. Define the and of storm. Then choose a (usually the DEM for the watershed) which will define the cell size, grid, extent, and mask of the resulting precipitation depth raster. Finally, define an .</p>
+<h3>Create a curve number raster</h3>
+<p>Open the tool. For , find the database file (extension .dbf) called —it will be in the root directory of the folder where the distributed tools are located. This table includes curve numbers for each unique combination of NLCD class and SSURGO hydrologic soil group (see Table  [table:curveNumberTable] taken from <span class="citation"></span>). For the , browse for the version of NLCD2006 that you downloaded. For the , point to the file geodatabase that you downloaded from the NRCS GeoSpatialDataGateway (see Preperation). Finally, add the from tool 1 (to use as a grid template) and define an output .</p>
+<p>We will use the NLCD land cover data to create a raster surface of curve numbers. First, clip your version of NLCD to the extent of the from tool 1, . Then, add a field to the clipped NLCD raster to store a curve number value associated with each land cover class. There is some debate over what curve numbers should be used for each land cover type (and generally whether curve numbers can effectively be applied to satellite-based land-cover classes).</p>
+<h3>Run the tool</h3>
+<p>After you have created a curve number raster, you are ready to run the tool for identifying non-contributing areas. Open the tool in the toolbox. Add the and from tool 1, the from tool 2a, the you just created, and the polygon. Finally, define an raster (a raster with unique, but arbitrary, IDs for each non-contributing watershed) and an . The is simply the conditioned DEM with the extent of non-contributing areas set to <em>NoData</em>.</p>
+<h2>Recondition DEM for Non-contributing Areas</h2>
+<p>Creating a hydrologically valid DEM is dependent on the extent of DEM cells. Often, the DEM cells are coerced to model &quot;outward&quot; flow on the edge of the DEM raster, presuming that the edge of the raster defines an area outside of the watershed. To properly model non-contributing areas, we have to recondition the DEM to force the direction of hydrologic flow <em>toward</em> the non-contributing area. Thus, accumulating flow will not be propogated downstream of the non-contributing area. That is, flow that enters a non-contributing area will &quot;dissappear.&quot;</p>
+<p>To hydrologically correct for non-contributing areas, open the tool. Add the from tool 2c. You may also optionally add , which could include any features on the landscape that could eliminate runoff, such as grass waterways, strip cropping, or any other best-management practices that would eliminate runoff that can be identified spatially. These features should be rasterized to the cellsize, extent, and grid (i.e., &quot;snapped&quot;) of the . Next, find the path to the as you did in tool 1. Finally, define an . This DEM will be the final DEM used to estimate the ES.</p>
+<h2>Calculate Stream Power Index</h2>
+<p>The first metric in the bivariate ES is the &quot;stream power index.&quot; The stream power index includes information on slope and upstream drainage area—it is used for estimating the locations of gully erosion:</p>
+<p><br /><span class="math"><em>S</em><em>I</em><sub><em>i</em></sub> = <em>l</em><em>n</em>(<em>D</em><em>A</em><sub><em>i</em></sub> × <em>t</em><em>a</em><em>n</em>(<em>G</em><sub><em>i</em></sub>))</span><br /></p>
+<p>where <span class="math"><em>S</em><em>I</em></span> is the stream power index at gridcell <span class="math"><em>i</em></span>, <span class="math"><em>D</em><em>A</em></span> is the upstream drainage area (flow accumulation at gridcell <span class="math"><em>i</em></span> multiplied by gridcell area), and <span class="math"><em>G</em></span> is the slope at a gridcell <span class="math"><em>i</em></span> in radians.</p>
+<p>Open the tool in the toolbox. Add the from tool 1. This input will be used to calculate slope, so you do not want to confuse this input with any &quot;filled&quot; DEM—filled DEM are used only for modeling hydrologic flow, and thus should not be used to calculate other topographic metrics such as slope. Add the from tool 3. This input will be used to calculate drainage area using a &quot;flow accumulation&quot; raster. Assign a —this value sets the number of upstream gridcells for which the flow is assumed to transition to surface water<sup><a href="#fn10" class="footnoteRef" id="fnref10">10</a></sup>. The stream power index is intended to only model landscape erosion, not instream or bank erosion, and thus gridcells assumed to be surface water should be excluded. Finally, define an .</p>
+<h2>Calculate Soil Loss Using the Universal Soil Loss Equation (USLE)</h2>
+<h3>Overview of the USLE</h3>
+<p>The second metric in the bivariate ES is soil loss as estimated by the USLE. The USLE estimates sheet and rill erosion across fields using:</p>
+<p><br /><span class="math"><em>E</em><sub><em>i</em></sub> = <em>R</em><sub><em>i</em></sub> × <em>K</em><sub><em>i</em></sub> × <em>L</em><em>S</em><sub><em>i</em></sub> × <em>C</em><sub><em>i</em></sub> × <em>P</em><sub><em>i</em></sub></span><br /></p>
+<p>where at each gridcell <span class="math"><em>i</em></span>, <span class="math"><em>E</em></span> is soil loss in <span class="math"><em>t</em><em>o</em><em>n</em><em>s</em> ⋅ (<em>h</em><em>a</em> ⋅ <em>y</em><em>e</em><em>a</em><em>r</em>)<sup> − 1</sup></span>, <span class="math"><em>R</em></span> is rainfall erosivity in <span class="math">(<em>m</em><em>e</em><em>g</em><em>a</em><em>j</em><em>o</em><em>u</em><em>l</em><em>e</em> ⋅ <em>m</em><em>i</em><em>l</em><em>l</em><em>i</em><em>m</em><em>e</em><em>t</em><em>e</em><em>r</em>) ⋅ (<em>h</em><em>a</em> ⋅ <em>h</em><em>o</em><em>u</em><em>r</em> ⋅ <em>y</em><em>e</em><em>a</em><em>r</em>)<sup> − 1</sup></span>, K is soil erodibility in <span class="math">(<em>t</em><em>o</em><em>n</em><em>s</em> ⋅ <em>h</em><em>a</em> ⋅ <em>h</em><em>o</em><em>u</em><em>r</em>) ⋅ (<em>h</em><em>a</em> ⋅ <em>m</em><em>e</em><em>g</em><em>a</em><em>j</em><em>o</em><em>u</em><em>l</em><em>e</em> ⋅ <em>m</em><em>m</em>)<sup> − 1</sup></span>, <span class="math"><em>L</em><em>S</em></span> is slope/slope-length (dimensionless), <span class="math"><em>C</em></span> is a land cover factor (unitless), and <span class="math"><em>P</em></span> is a &quot;practice&quot; factor (unitless metric describing the capacity of a land-management practice to prevent erosion) which is beyond the scope of this tool and thus will assumed to be 1. All these data need to be acquired prior to running the tool, and will take some time to prepare. Preparation steps are outlined below in detail.</p>
+<h3>Prepare GIS datasets</h3>
+<p>Rainfall erosivity (or R-factor) is the cumulative force of rainfall on soil. In Wisconsin where topographic effects to rainfall intensity are minimal, erosivity varies at very large spatial scales. Because this tool is intended for small watersheds, erosivity can safely be assumed to be constant. For an appropriate constant value of erosivity, see <span class="citation"></span> Fact Sheet 3.1 page 5 for a map of erosivity in U.S. customary units. Multiply this value by 17.02 to convert to international (SI, or metric) units. Alternatively, if you know <em>a priori</em> that erosivity varies at a scale within the extent of your watershed, you can define an . If you choose to use an , resample the grid to the extent and resolution of the from tool 1—ensure that the resampled grid matches the grid of the by setting the to the in the of the tool.</p>
+<p>Erodibility, or &quot;K-factor,&quot; is an attribute that can be found in the gSSURGO soils database. Open the tool in the toolbox. Under , point to the file geodatabase that you downloaded from the NRCS GeoSpatialDataGateway (see Preperation). Keep the field as the default . Add the to use as a template for the resulting K-factor raster and the polygon used to clip the DEM (these are the same two inputs from tool 1). Finally, define an and run the tool.</p>
+<p>The last step in preparing the GIS datasets for calculating soil loss is creating a . The C-factor is a unitless metric that adjusts the amount of soil loss for different land cover types. To create the C-factor raster, we will simply reclassify the NLCD2006 land cover codes to a meaningful C-factor value. Example C-factors are listed in Table  [table:cFactorTable] (taken from <span class="citation"></span>, Appendix F). Open the tool in the . Define the as the NLCD2006 and the as . Manually input the old-to-new reclassification in the provided interface. The new values can only be integers, so enter the desired C-factors after multiplying by 1000. Define an and run the tool. The resulting C-factor raster will need to be reconverted to a decimal number. Open the tool in . In the box, enter the following command:<br /><br /><code>Float(&quot;C:\cFactorTimes1000&quot;) / 1000</code><br /><br />where <code>&quot;C:\cFactorTimes1000&quot;</code> is the path to the reclassified raster from above. The resulting will be used as an input to the tool.</p>
+<h3>Run the tool</h3>
+<p>Open the tool in the toolbox. Add the from tool 1, and the from tool 3. If you decide to use a raster version of erosivity, add that dataset to the parameter. On the contrary, if erosivity can be considered constant, add that value to the box. In either case, use an erosivity value in SI units of <span class="math">(<em>m</em><em>e</em><em>g</em><em>a</em><em>j</em><em>o</em><em>u</em><em>l</em><em>e</em> ⋅ <em>m</em><em>i</em><em>l</em><em>l</em><em>i</em><em>m</em><em>e</em><em>t</em><em>e</em><em>r</em>) ⋅ (<em>h</em><em>a</em> ⋅ <em>h</em><em>o</em><em>u</em><em>r</em> ⋅ <em>y</em><em>e</em><em>a</em><em>r</em>)<sup> − 1</sup></span>. You will notice that both erosivity parameters are considered optional—if no value is given, an erosivity value of 1 will be used. If an erosivity value of 1 is used, the ES will be the same as if you had entered a , however the resulting soil loss raster cannot be interpreted on an absolute scale. Next, add both the calculated from gSSURGO and the calculated from NLCD. The is considered optional—if no value is given, the C factor is given a value of 1. As you did in tool 4, define a to set the number of upstream gridcells for which the flow is assumed to transition to surface water. Finally, define an output soil loss raster. If all inputs were in SI units, and all optional inputs were set to a meaningful value, the output will be in units of <span class="math"><em>t</em><em>o</em><em>n</em><em>s</em> ⋅ (<em>h</em><em>a</em> ⋅ <em>y</em><em>e</em><em>a</em><em>r</em>)<sup> − 1</sup></span>.</p>
+<h2>Calculate Erosion Score</h2>
+<p>The ES is a bivariate index based on the stream power index and USLE-based soil loss. The ES gives equal weight to both by first, normalizing the distribution of soil loss by log-transforming (the stream power index is already normalized), second, centering their distribution on 0 and forcing the standard deviation to 1 by calculating a Z-score<sup><a href="#fn11" class="footnoteRef" id="fnref11">11</a></sup>, and finally taking the average of the Z-scores of the soil loss and the stream power index. Therefore, ES can be interpreted as the number of standard deviations from the mean. As a standard benchmark, an ES above 2 is above the 95th percentile of all pixels.</p>
+<p>Open the tool. Add the from tool 5b and the from tool 4. You may optionally add a if you choose to summarize the ES—the natural boundary in this case would be the CLU field boundaries. If you choose to summarize by a zones, you must choose a (if the is a string/text data type, the zone values will be coerced to sequential integers). Finally, add the and optional outputs. The is required if a was defined.</p>
+<h1>Interpretation and Limitations</h1>
+<p>Congratulations! If you have read this far, it hopefully means that you have an ES raster layer and likely an ES summarized by agricultural field. These results can help you prioritize where to focus your efforts for improving water quality in your watershed downstream.</p>
+<p>If you defined an in the tool, you will have a table of summary statistics of erosion scores that you can join to your to locate priority features by creating color maps of different statistics using quantitative symbology on your boundary feature class. The summary table will have several statistics to choose from including the mean, maximum, and sum of all erosion score values within the boundaries of each feature. If you are most concerned with highly concentrated erosion, perhaps the most valuable statistic would be the mean erosion score, however the mean erosion score may reflect anomolous high values that skew the average—this is particularly a problem in small fields. If you are most concerned with total sediment runoff, perhaps the best statistic would be the sum, however the sum erosion score may reflect simply the size of the field, which may obscure otherwise priority fields that are smaller, but have more intense runoff events. If you are interested in the highest intensity runoff areas, you may be interested in the maximum erosion score, however this statistic may have the same problem with interpretation as the mean statistic—it may reflect anomolous high pixels, particularly in small fields. There are several ways to look at the resulting data, and no single statistic gives the correct answer. We advise the user to explore each of these statistics for different insights regarding erosion processes in your area of interest.</p>
+<p>This dataset is best interpreted in combination with other determining factors of erosion and/or nutrient runoff. For example, as a watershed manager, you may be interested in what cropping practices are present—if information regarding specific practices are availabe and a P-factor can be inferred, these practices can be used to modify the USLE by multiplying a P-factor raster by the USLE raster. Additionally, you may be interested in fields that are on or near surface water—the ES summarized by field can be overlaid on a feature layer with information regarding the location of perennial or intermittent streams to gain insight into the potential for sediment delivery and transport.</p>
+<p>Although the ES data product can be useful for prioritizing areas for implementation of best management practices, there are several key limitations that decision-makers should be aware of when interpreting the data. First, the ES is a unitless index. Although the output of the USLE raster is intended to have value in terms of total soil loss in <span class="math"><em>t</em><em>o</em><em>n</em><em>s</em> ⋅ (<em>h</em><em>a</em> ⋅ <em>y</em><em>e</em><em>a</em><em>r</em>)<sup> − 1</sup></span>, the stream power index raster does not. Because the two are combined into a single index, the resulting raster cannot be interpreted absolutely; differences from field-to-field can only be interpreted ordinally. Therefore, this tool cannot be used to make inferences regarding the water quality improvement associated with the implementation of best-management practices, but only to make decisions about where to prioritize implementation. Second, the ES itself has not been rigorously validated. Calculating erosion using a GIS is a relatively new science—there are many case studies investigating soil loss using a GIS-based USLE and a few studies identifying gullies using the stream power index. The results of these studies are mixed in terms of prediction accuracy, and there are no meta-analyses to date that broadly investigate the utility of either metric. Because of the above limitations, this tool cannot be used to predict erosion <em>rates</em>, but rather the relative probability of a field to have <em>more</em> erosion problems than its neighbors.</p>
+<h1 class="unnumbered">Tables</h1>
+<p>[h]</p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="center">NLCD Code</td>
+<td align="left">Description</td>
+<td align="center">C-Factor</td>
+</tr>
+<tr class="even">
+<td align="center">11</td>
+<td align="left">Open Water</td>
+<td align="center">0</td>
+</tr>
+<tr class="odd">
+<td align="center">21</td>
+<td align="left">Developed, Open Space</td>
+<td align="center">0.003</td>
+</tr>
+<tr class="even">
+<td align="center">22</td>
+<td align="left">Developed, Low Intensity</td>
+<td align="center">0.002</td>
+</tr>
+<tr class="odd">
+<td align="center">23</td>
+<td align="left">Developed, Medium Intensity</td>
+<td align="center">0.001</td>
+</tr>
+<tr class="even">
+<td align="center">24</td>
+<td align="left">Developed, High Intensity</td>
+<td align="center">0</td>
+</tr>
+<tr class="odd">
+<td align="center">31</td>
+<td align="left">Barren Land (Rock/Sand/Clay)</td>
+<td align="center">0</td>
+</tr>
+<tr class="even">
+<td align="center">41</td>
+<td align="left">Deciduous Forest</td>
+<td align="center">0.003</td>
+</tr>
+<tr class="odd">
+<td align="center">42</td>
+<td align="left">Evergreen Forest</td>
+<td align="center">0.003</td>
+</tr>
+<tr class="even">
+<td align="center">43</td>
+<td align="left">Mixed Forest</td>
+<td align="center">0.003</td>
+</tr>
+<tr class="odd">
+<td align="center">52</td>
+<td align="left">Shrub / Scrub</td>
+<td align="center">0.004</td>
+</tr>
+<tr class="even">
+<td align="center">71</td>
+<td align="left">Grassland / Herbaceous</td>
+<td align="center">0.004</td>
+</tr>
+<tr class="odd">
+<td align="center">81</td>
+<td align="left">Pasture / Hay</td>
+<td align="center">0.004</td>
+</tr>
+<tr class="even">
+<td align="center">82</td>
+<td align="left">Cultivated Crops</td>
+<td align="center">0.29</td>
+</tr>
+<tr class="odd">
+<td align="center">90</td>
+<td align="left">Woody Wetlands</td>
+<td align="center">0.003</td>
+</tr>
+<tr class="even">
+<td align="center">95</td>
+<td align="left">Emergent Herbaceous Wetlands</td>
+<td align="center">0.004</td>
+</tr>
+</tbody>
+</table>
+<p>[table:cFactorTable]</p>
+<p>[h]</p>
+<p>lcccc &amp;<br />NLCD Code and Description &amp; A &amp; B &amp; C &amp; D<br />11 Open Water &amp; 100 &amp; 100 &amp; 100 &amp; 100<br />21 Developed, Open Space &amp; 89 &amp; 92 &amp; 94 &amp; 95<br />22 Developed, Low Intensity &amp; 57 &amp; 72 &amp; 81 &amp; 86<br />23 Developed, Medium Intensity &amp; 61 &amp; 75 &amp; 83 &amp; 87<br />24 Developed, High Intensity &amp; 89 &amp; 92 &amp; 94 &amp; 95<br />31 Barren Land (Rock/Sand/Clay) &amp; 77 &amp; 86 &amp; 91 &amp; 94<br />41 Deciduous Forest &amp; 36 &amp; 60 &amp; 73 &amp; 79<br />42 Evergreen Forest &amp; 36 &amp; 60 &amp; 73 &amp; 79<br />43 Mixed Forest &amp; 36 &amp; 60 &amp; 73 &amp; 79<br />52 Shrub / Scrub &amp; 35 &amp; 56 &amp; 70 &amp; 77<br />71 Grassland / Herbaceous &amp; 49 &amp; 69 &amp; 79 &amp; 84<br />81 Pasture / Hay &amp; 49 &amp; 69 &amp; 79 &amp; 84<br />82 Cultivated Crops &amp; 67 &amp; 78 &amp; 85 &amp; 89<br />90 Woody Wetlands &amp; 36 &amp; 60 &amp; 73 &amp; 79<br />95 Emergent Herbaceous Wetlands &amp; 49 &amp; 69 &amp; 79 &amp; 84<br /></p>
+<p>[table:curveNumberTable]</p>
+<h1 class="unnumbered">Figures</h1>
+<p>[h] <img src="digitizingCulverts.png" alt="image" /> [fig:digitizingCulverts]</p>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>http://relief.ersc.wisc.edu/wisconsinview/form.php<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>http://tools.crwr.utexas.edu/OptimizedPitRemoval/Optimized-Pit-Removal-V1.5.1.zip<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>http://www.mrlc.gov/nlcd06_data.php<a href="#fnref3">↩</a></p></li>
+<li id="fn4"><p>http://datagateway.nrcs.usda.gov/GDGOrder.aspx?order=QuickState<a href="#fnref4">↩</a></p></li>
+<li id="fn5"><p>http://www.fsa.usda.gov/FSA/apfoapp?area=home&amp;subject=prod&amp;topic=clu<a href="#fnref5">↩</a></p></li>
+<li id="fn6"><p>Farm Service Agency, Natural Resources Conservation Service, Rural Development<a href="#fnref6">↩</a></p></li>
+<li id="fn7"><p>http://water.usgs.gov/GIS/huc.html<a href="#fnref7">↩</a></p></li>
+<li id="fn8"><p>http://tools.crwr.utexas.edu/OptimizedPitRemoval/Optimized-Pit-Removal-V1.5.1.zip<a href="#fnref8">↩</a></p></li>
+<li id="fn9"><p>http://dipper.nws.noaa.gov/hdsc/pfds/<a href="#fnref9">↩</a></p></li>
+<li id="fn10"><p>This value will vary depending on the cell size of your DEM and the type of hydrology in your area of interest. The default 50,000 was chosen by surveying a watershed in Southern Wisconsin and determining the number of pixels on a 3-meter resolution flow accumulation raster where hydrology transitioned to surface water. The same approach was used on a watershed in Northern Wisconsin using a 10-meter resolution flow accumulation raster and the flow accumulation threshold was determined to be 5,000. Assuming a linear relationship between cell size and flow accumulation threshold, we can derive a relationship using these two cases as a guide for setting the threshold: <span class="math"><em>F</em><em>A</em><em>C</em> =  − 6. 5<em>C</em><em>S</em> + 70</span> where <span class="math"><em>F</em><em>A</em><em>C</em></span> is the flow accumulation threshold in thousands of pixels and <span class="math"><em>C</em><em>S</em></span> is the cell size of the DEM in meters.<a href="#fnref10">↩</a></p></li>
+<li id="fn11"><p><span class="math"><em>Z</em> = (<em>x</em><sub><em>i</em></sub> − <em>μ</em>) / <em>σ</em></span> where <span class="math"><em>x</em></span> is the pixel value of the <span class="math"><em>i</em><sup><em>t</em><em>h</em></sup></span> pixel, <span class="math"><em>μ</em></span> is the mean of the raster dataset, and <span class="math"><em>σ</em></span> is the standard deviation of the raster dataset<a href="#fnref11">↩</a></p></li>
+</ol>
+</div>
+</body>
+</html>

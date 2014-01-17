@@ -1,0 +1,33 @@
+ROTATION,COVER_LEVEL,C_FACTOR
+Cash Grain,High,0.175553898
+Cash Grain,Low,0.009792415
+Continuous Corn,Low,0.004977795
+Continuous Corn,Medium,0.143344289
+Continuous Corn,High,0.300463901
+Dairy Potato Year,,0.084866091
+Dairy Rotation,High,0.180300881
+Dairy Rotation,Low,0.006330597
+Pasture/Hay/Grassland,High,0.038562852
+Pasture/Hay/Grassland,Low,0.000249746
+Potato/Grain/Veggie Rotation,Low,0.180935881
+Potato/Grain/Veggie Rotation,High,0.305486595
+111,,0
+121,,0.003
+122,,0.001
+123,,0.001
+124,,0.001
+131,,0.001
+141,,0.003
+142,,0.003
+143,,0.003
+152,,0.02
+171,,0.02
+181,,0.02
+190,,0.013
+195,,0.003
+63,,0.003
+64,,0.02
+65,,0.001
+82,,0.0015
+83,,0
+87,,0.013
