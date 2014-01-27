@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.3-1.40.12 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2013.7.1)  17 JAN 2014 16:59
+This is pdfTeX, Version 3.1415926-2.3-1.40.12 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2013.7.1)  23 JAN 2014 13:15
 entering extended mode
 **synopsis.tex
 (D:\TEMP\lidarTargetingTools\doc\synopsis.tex
@@ -67,20 +67,46 @@ Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
 ))
 \Gin@req@height=\dimen103
 \Gin@req@width=\dimen104
-) (D:\TEMP\lidarTargetingTools\doc\synopsis.aux)
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 13.
-LaTeX Font Info:    ... okay on input line 13.
+)
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\psnfss\times.sty
+Package: times 2005/04/12 PSNFSS-v9.2a (SPQR) 
+)
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\draftwatermark\draf
+twatermark.sty
+Package: draftwatermark 2006/06/30 1.0 Put a gray textual watermark on document
+ pages
 
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\everypage\everypage
+.sty
+Package: everypage 2007/06/20 1.1 Hooks to run on every page
+)
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\graphics\color.sty
+Package: color 2005/11/14 v1.0j Standard LaTeX Color (DPC)
+
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\00miktex\color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package color Info: Driver file: pdftex.def on input line 130.
+)
+\sc@wm@fontsize=\skip43
+) (D:\TEMP\lidarTargetingTools\doc\synopsis.aux)
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 15.
+LaTeX Font Info:    ... okay on input line 15.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 15.
+
+(C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\latex\psnfss\ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
 (C:\Users\ruesca\Documents\generalSoftware\MiKTeX\tex\context\base\supp-pdf.mki
 i
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -97,33 +123,35 @@ i
 \everyMPtoPDFconversion=\toks16
 )
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <14.4> on input line 14.
+(Font)              <14.4> on input line 16.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 14.
- [1
+(Font)              <7> on input line 16.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17.28> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 17.
+ [1{C:/Users/ruesca/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}
 
-{C:/Users/ruesca/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
-<./figures/decisionFramework.png, id=8, 470.11635pt x 164.7756pt>
+]
+<./figures/decisionFramework.png, id=7, 470.11635pt x 164.7756pt>
 File: ./figures/decisionFramework.png Graphic file (type png)
 
 <use ./figures/decisionFramework.png>
-Package pdftex.def Info: ./figures/decisionFramework.png used on input line 26.
+Package pdftex.def Info: ./figures/decisionFramework.png used on input line 28.
 
 (pdftex.def)             Requested size: 390.0pt x 136.70084pt.
  [2] [3 <D:/TEMP/lidarTargetingTools/doc/figures/decisionFramework.png>]
-<./figures/fieldScaleTargeting.png, id=15, 374.5995pt x 372.4314pt>
+<./figures/fieldScaleTargeting.png, id=14, 374.5995pt x 372.4314pt>
 File: ./figures/fieldScaleTargeting.png Graphic file (type png)
 
 <use ./figures/fieldScaleTargeting.png>
 Package pdftex.def Info: ./figures/fieldScaleTargeting.png used on input line 4
-4.
+6.
 (pdftex.def)             Requested size: 390.0pt x 387.74573pt.
 
-<./figures/intermediateLayers.png, id=17, 403.9893pt x 419.8887pt>
+<./figures/intermediateLayers.png, id=16, 403.9893pt x 419.8887pt>
 File: ./figures/intermediateLayers.png Graphic file (type png)
 
 <use ./figures/intermediateLayers.png>
-Package pdftex.def Info: ./figures/intermediateLayers.png used on input line 53
+Package pdftex.def Info: ./figures/intermediateLayers.png used on input line 55
 .
 (pdftex.def)             Requested size: 347.09976pt x 360.7769pt.
  [4] [5 <D:/TEMP/lidarTargetingTools/doc/figures/fieldScaleTargeting.png>] [6 <
@@ -131,23 +159,21 @@ D:/TEMP/lidarTargetingTools/doc/figures/intermediateLayers.png>] (D:\TEMP\lidar
 TargetingTools\doc\synopsis.bbl) [7]
 (D:\TEMP\lidarTargetingTools\doc\synopsis.aux) ) 
 Here is how much of TeX's memory you used:
- 1146 strings out of 494045
- 16048 string characters out of 3139922
- 69094 words of memory out of 3000000
- 4478 multiletter control sequences out of 15000+200000
- 6404 words of font info for 23 fonts, out of 3000000 for 9000
+ 1290 strings out of 494045
+ 18830 string characters out of 3139922
+ 70537 words of memory out of 3000000
+ 4596 multiletter control sequences out of 15000+200000
+ 16732 words of font info for 33 fonts, out of 3000000 for 9000
  715 hyphenation exceptions out of 8191
- 27i,6n,19p,1410b,221s stack positions out of 5000i,500n,10000p,200000b,50000s
-<C:/Users/ruesca/Documents/gene
-ralSoftware/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/ruesca/D
-ocuments/generalSoftware/MiKTeX/fonts/type1/public/amsfonts/cm/cmcsc10.pfb><C:/
-Users/ruesca/Documents/generalSoftware/MiKTeX/fonts/type1/public/amsfonts/cm/cm
-r12.pfb><C:/Users/ruesca/Documents/generalSoftware/MiKTeX/fonts/type1/public/am
-sfonts/cm/cmr17.pfb><C:/Users/ruesca/Documents/generalSoftware/MiKTeX/fonts/typ
-e1/public/amsfonts/cm/cmti12.pfb>
-Output written on synopsis.pdf (7 pages, 1106314 bytes).
+ 27i,10n,29p,1410b,235s stack positions out of 5000i,500n,10000p,200000b,50000s
+{C:/Users/ruesca/Documents/gene
+ralSoftware/MiKTeX/fonts/enc/dvips/fontname/8r.enc}<C:/Users/ruesca/Documents/g
+eneralSoftware/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/ruesca/Documen
+ts/generalSoftware/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/ruesca/Doc
+uments/generalSoftware/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on synopsis.pdf (7 pages, 1071972 bytes).
 PDF statistics:
- 52 PDF objects out of 1000 (max. 8388607)
+ 45 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  16 words of extra memory for PDF output out of 10000 (max. 10000000)
 
