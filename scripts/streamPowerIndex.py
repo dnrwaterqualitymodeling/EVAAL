@@ -24,8 +24,9 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile):
 	CA = facLand * float(env.cellSize)**2
 
 	del fac, facLand
-
-	spi = Ln(CA * Tan(G))
+	innerTerm = Con(BooleanAnd(IsNull(CA * Tan(G)),(Raster(demFile) > 0)),1,((CA * Tan(G)) + 1))
+		
+	spi = Ln(innerTerm)
 	spi.save(outFile)
 
 if __name__ == '__main__':

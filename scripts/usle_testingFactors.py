@@ -9,7 +9,7 @@ env.rasterStatistics = 'NONE'
 env.pyramid = 'NONE'
 
 def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile\
-	, facThreshold, outFile):
+	, facThreshold, zonalFile, zonalId, outFile):
 
 	tempDir = tmp.tempDir
 	tempGdb = tmp.tempGdb
@@ -46,7 +46,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	m = 0.6
 	n = 1.3
 	b0 = 0.09
-	LS10  =  (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
+	LS10 = (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
 	del a0, m, n, b0
 	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
 	del LS10
@@ -61,12 +61,32 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 		R = float(erosivityConstant)
 	K = Raster(kFactorFile)
 	C = Raster(cFactorFile)
-	LS = Con(BooleanAnd(IsNull(lsFile),(Raster(demFile) > 0)), 0, lsFile)
+	LS = Raster(lsFile)
+	
+	lsSummaryTable = tempGdb + '/lsSummaryTable'
+	kSummaryTable = tempGdb + '/kSummaryTable'
+	cSummaryTable = tempGdb + '/cSummaryTable'
+	lsSummary = ZonalStatisticsAsTable(zonalFile, zonalId, LS, lsSummaryTable, 'DATA', 'MAXIMUM')
+	kSummary = ZonalStatisticsAsTable(zonalFile, zonalId, K, kSummaryTable, 'DATA', 'MEAN')
+	cSummary = ZonalStatisticsAsTable(zonalFile, zonalId, C, cSummaryTable, 'DATA', 'MEAN')
+	
+	ls = arcpy.da.TableToNumPyArray(lsSummaryTable, 'MAX')
+	k = arcpy.da.TableToNumPyArray(kSummaryTable, 'MEAN')
+	c = arcpy.da.TableToNumPyArray(cSummaryTable, 'MEAN')
+	
+	E = ls['MAX'] * k['MEAN'] * c['MEAN']
+	arcpy.Copy_management(lsSummaryTable, tempGdb + '/meanSoilLoss')
+	arcpy.AddField_management(tempGdb + '/meanSoilLoss', 'meanSoilLoss', 'FLOAT')
+	
+	rows = arcpy.UpdateCursor(tempGdb + '/meanSoilLoss')
+	for i,row in enumerate(rows):
+		row.meanSoilLoss = float(E[i])
+		rows.updateRow(row)
+	del row,rows
+	# E = R * K * LS * C
 
-	E = R * K * LS * C
-
-	E.save(outFile)
-	del E, R, K, LS, C 
+	# E.save(outFile)
+	# del E, R, K, LS, C 
 
 if __name__ == '__main__':
 
@@ -78,7 +98,20 @@ if __name__ == '__main__':
 	kFactorFile = arcpy.GetParameterAsText(4)
 	cFactorFile = arcpy.GetParameterAsText(5)
 	facThreshold = int(arcpy.GetParameterAsText(6))
-	outFile = arcpy.GetParameterAsText(7)
-
+	zonalFile = arcpy.GetParameterAsText(7)
+	zonalId = arcpy.GetParameterAsText(8)
+	outFile = arcpy.GetParameterAsText(9)
+	
+	demFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/demConditioned'
+	fillFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/demOptimFill'
+	erosivityFile = ''
+	erosivityConstant = ''
+	kFactorFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/kFactor'
+	cFactorFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/c_low'
+	facThreshold = 1000	
+	zonalFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/wbiFieldBoundaries'
+	zonalId = 'RELATE'
+	outFile = 'D:/TEMP/pleasant_Valley_soilLossComparison.gdb/soilLossTableRelate_high'
+	
 	usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile\
 		, facThreshold, outFile)
