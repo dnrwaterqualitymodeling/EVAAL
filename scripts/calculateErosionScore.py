@@ -42,10 +42,7 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	if not zonalFile == '':
 		# get field data type
 		fields = arcpy.ListFields(tempGdb + '/zonalRaster', zonalId)
-		dtype = []
-		for field in fields:
-			dtype.append(field.type)
-		if dtype[0] == 'String':
+		if len(fields) != 0:
 			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', zonalId, erosionScore\
 				, outSummaryTable, "DATA", "ALL")
 		else:
