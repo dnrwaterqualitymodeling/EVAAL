@@ -12,4 +12,5 @@ figures
 *.out
 *.xml
 *.toc
+*.lot
 *.bib
