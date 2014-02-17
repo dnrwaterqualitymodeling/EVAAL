@@ -1,0 +1,1 @@
+All intermediate data will be stored in this directory. It may be useful to explore its contents after running a tool to ensure that the tool is executing in an expected way. This directory is wiped each time a tool is executed.
