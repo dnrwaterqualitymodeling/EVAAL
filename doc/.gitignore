@@ -1,0 +1,15 @@
+Thumbs.db
+figures
+*.aux
+*.bbl
+*.blg
+*.log
+*.tex
+*.docx
+*.dvi
+*.html
+*.lof
+*.out
+*.xml
+*.toc
+*.bib

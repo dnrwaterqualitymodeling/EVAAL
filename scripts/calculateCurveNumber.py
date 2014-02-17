@@ -147,7 +147,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 		if row.hydgrpdcd is None:
 			hsg = ['A','B','C','D']
 		else:
-			hsg = [row.hydgrpdcd[0]]
+			hsg = [str(row.hydgrpdcd[0])]
 		lcs = []
 		for yrCol in yrCols:
 			if row.getValue(yrCol) is None:
