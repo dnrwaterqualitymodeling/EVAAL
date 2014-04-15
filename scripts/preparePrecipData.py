@@ -19,7 +19,6 @@ def preparePrecipData(frequency, duration, rasterTemplateFile, outPrcp):
 	# URL for ascii grid of the 10-year 24-hour rainfall event
 	ftpDir = 'ftp://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
 	prcpUrl = ftpDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
-	arcpy.AddMessage(prcpUrl)
 	transformation = 'NAD_1983_To_HARN_Wisconsin'
 	downloadsFolder = os.environ['UserProfile'] + '/Downloads'
 	# Intermediate data
@@ -30,6 +29,8 @@ def preparePrecipData(frequency, duration, rasterTemplateFile, outPrcp):
 	# Download Prcp data, read data from archive, save backup
 	asciiArchive = downloadsFolder + '/mw' + frequency + 'yr' + duration + 'ha.zip'
 	asciiFile = downloadsFolder + '/mw' + frequency + 'yr' + duration + 'ha.asc'
+	arcpy.AddMessage("Downloading:")
+	arcpy.AddMessage(prcpUrl)
 	urllib.urlretrieve(prcpUrl, asciiArchive)
 	zf = zipfile.ZipFile(asciiArchive, 'r')
 	asciiData = zf.read('mw' + frequency + 'yr' + duration + 'ha.asc')

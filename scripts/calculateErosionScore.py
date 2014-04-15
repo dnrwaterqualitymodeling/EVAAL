@@ -60,4 +60,3 @@ if __name__ == '__main__':
 	
 	calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile\
 		, outSummaryTable)
-	

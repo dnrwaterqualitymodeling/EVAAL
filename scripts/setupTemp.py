@@ -27,7 +27,7 @@ else:
 		if os.path.isdir(f) and f != 'scratch.gdb':
 			arcpy.AddMessage('Deleting ' + f + '...')
 			shutil.rmtree(f)
-		elif f != 'scratch.gdb':
+		elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
 			arcpy.AddMessage('Deleting ' + f + '...')
 			os.remove(f)
 	arcpy.AddMessage('#################')
