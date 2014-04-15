@@ -225,14 +225,13 @@ def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
 	return cn
 
 def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
-	##################################################
 	years = range(int(yrStart), int(yrEnd) + 1)
 	cdlUrl = r'http://nassgeodata.gmu.edu:8080/axis2/services/CDLService/GetCDLFile?'
-	arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
 	ext = arcpy.Describe(watershedCdlPrj).extent
 	ping = subprocess.call(['ping', '-n', '1', 'nassgeodata.gmu.edu'])
 	if ping == 1:
-		arcpy.AddError('The CropScape server is down. Please try again later, or download local Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
+		arcpy.AddError('The CropScape server is down. Please try again later, or download local \
+			Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
 	cdlTiffs = []
 	for year in years:
 		year = str(year)
@@ -289,6 +288,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	coverTypeLookup = json.load(f)
 	f.close()
 	del f
+	arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
 	sr = arcpy.SpatialReference(102039)
 	arcpy.Project_management(watershedFile, watershedCdlPrj, sr)
 	if downloadBool == 'true':
@@ -605,7 +605,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, outRaster, tempDir, tempGdb)
 	arcpy.PolygonToRaster_conversion('mupolygon', outField, outRaster\
 		,'MAXIMUM_COMBINED_AREA', '', demFile)
 
-def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd, \
+def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
 	outRotation, outHigh, outLow, legendFile, cFactorXwalkFile, tempDir, tempGdb):
 
 	os.environ['ARCTMPDIR'] = tempDir
@@ -624,36 +624,9 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
 	sr = arcpy.SpatialReference(102039)
 	arcpy.Project_management(watershedFile, watershedCdlPrj, sr)
-
-	ext = arcpy.Describe(watershedCdlPrj).extent
-
 	if downloadBool == 'true':
-		ping = Popen(['ping', '-n', '1', 'nassgeodata.gmu.edu'], startupinfo=startupinfo)
-		ping.wait()
-		if ping == 1:
-			arcpy.AddError('The CropScape server is down. Please try again later, or download local Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
 		arcpy.AddMessage("Downloading Cropland Data Layers...")
-		years = range(int(yrStart), int(yrEnd) + 1)
-		cdlTiffs = []
-		for year in years:
-			year = str(year)
-			clipUrl = cdlUrl\
-				+ r'year='\
-				+ year + r'&'\
-				+ r'bbox='\
-				+ str(ext.XMin) + '%2C'\
-				+ str(ext.YMin) + '%2C'\
-				+ str(ext.XMax) + '%2C'\
-				+ str(ext.YMax)
-			try:
-				downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
-				urllib.urlretrieve(clipUrl, downloadLocXml)
-				tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
-				downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
-				urllib.urlretrieve(tiffUrl, downloadTiff)
-			except:
-				arcpy.AddError("The CropScape server failed. Please download the layers to your hard drive at http://www.nass.usda.gov/research/Cropland/Release/index.htm")
-			cdlTiffs.append(downloadTiff)
+		cdlTiffs = downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid)
 	else:
 		arcpy.AddMessage("Clipping Cropland Data Layers to watershed extent...")
 		localCdlList = localCdlList.split(';')
@@ -862,7 +835,8 @@ class Toolbox(object):
 			calculateStreamPowerIndex,
 			rasterizeKfactorForUsle,
 			rasterizeCfactorForUsle,
-			calculateSoilLossUsingUsle]
+			calculateSoilLossUsingUsle,
+			calculateErosionScore]
 
 class conditionTheLidarDem(object):
 	def __init__(self):
@@ -880,7 +854,7 @@ class conditionTheLidarDem(object):
 			direction="Input")
 
 		param1 = arcpy.Parameter(
-			displayName="Watershed area",
+			displayName="Watershed area (unbuffered)",
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
@@ -1052,7 +1026,7 @@ class createCurveNumberRaster(object):
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Watershed area",
+			displayName="Watershed area (buffered)",
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
@@ -1159,7 +1133,7 @@ class internallyDrainingAreas(object):
 			direction="Input")
 			
 		param4 = arcpy.Parameter(
-			displayName="Watershed area",
+			displayName="Watershed area (buffered)",
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
@@ -1378,7 +1352,7 @@ class rasterizeKfactorForUsle(object):
 			direction="Input")
 
 		param3 = arcpy.Parameter(
-			displayName="Watershed area",
+			displayName="Watershed area (buffered)",
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
@@ -1462,7 +1436,7 @@ class rasterizeCfactorForUsle(object):
 		param3.enabled = 0
 
 		param4 = arcpy.Parameter(
-			displayName="Watershed area",
+			displayName="Watershed area (buffered)",
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
@@ -1650,7 +1624,7 @@ class calculateSoilLossUsingUsle(object):
 class calculateErosionScore(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "5c. Calculate soil loss using USLE"
+		self.label = "6. Calculate erosion score"
 		self.description = ""
 		self.canRunInBackground = False
 
@@ -1679,11 +1653,10 @@ class calculateErosionScore(object):
 		param3 = arcpy.Parameter(
 			displayName="Zonal statistic field",
 			name="zonal_statistic_field",
-			datatype="GPField",
-			parameterType="Derived",
+			datatype="Field",
+			parameterType="Optional",
 			direction="Input")
 		param3.parameterDependencies = [param2.name]
-		param2.schema.clone = True
 
 		param4 = arcpy.Parameter(
 			displayName="Conditioned DEM (for raster template)",
@@ -1717,6 +1690,16 @@ class calculateErosionScore(object):
 		"""Modify the values and properties of parameters before internal
 		validation is performed.  This method is called whenever a parameter
 		has been changed."""
+		if parameters[2].value is not None:
+			parameters[3].enabled = 1
+			parameters[3].parameterType = "Required"
+			parameters[6].enabled = 1
+			parameters[6].parameterType = "Required"
+		else:
+			parameters[3].enabled = 0
+			parameters[3].parameterType = "Optional"
+			parameters[6].enabled = 0
+			parameters[6].parameterType = "Optional"
 		replaceSpacesWithUnderscores(parameters)
 		return
 
