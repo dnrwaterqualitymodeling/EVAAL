@@ -32,7 +32,7 @@ startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 def checkForSpaces(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer']:
+			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer', 'Table']:
 				path = arcpy.Describe(p.value).catalogPath
 				if ' ' in path:
 					p.setErrorMessage("Spaces are not allowed in dataset path.")
@@ -40,7 +40,7 @@ def checkForSpaces(parameters):
 def replaceSpacesWithUnderscores(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Output' and p.datatype in ['Feature Layer','Raster Layer']:
+			if p.direction == 'Output' and p.datatype in ['Feature Layer','Raster Layer', 'Table']:
 				if ' ' in p.value.value:
 					p.value = p.value.value.replace(' ', '_')
 					p.setWarningMessage('Spaces in file path were replaced with underscores.')
@@ -66,12 +66,20 @@ def setupTemp(tempDir,tempGdb):
 		arcpy.AddMessage(' ')
 		arcpy.AddMessage('#################')
 		arcpy.AddMessage('Cleaning scratch space...')
+		schemaMsg = 'Cannot clean temporary geodatabase. Are you viewing files in the database \
+			with a different application? If yes, please close those applications and re-run the \
+			tool. If that does not work, delete the temporary geodatabase (/scripts/temp/temp.gdb) \
+			and re-run the tool'
 		for tempFile in tempFiles:
 			arcpy.AddMessage('Deleting ' + tempFile + '...')
+			# if arcpy.TestSchemaLock(tempFile):
+				# arcpy.AddMessage('Schema lock on file. Try deleting scratch.gdb files manually. \
+					# Skipping...')
+				# continue
 			try:
 				arcpy.Delete_management(tempFile)
 			except:
-				arcpy.AddMessage('Cannot clean temporary geodatabase. Are you viewing files in the database with a different application? If yes, please close those applications and re-run the tool. If that does not work, delete the temporary geodatabase (/scripts/temp/temp.gdb) and re-run the tool')
+				arcpy.AddMessage(schemaMsg)
 		arcpy.Compact_management(tempGdb)
 		os.chdir(tempDir)
 		fileList = os.listdir('.')
@@ -379,8 +387,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
 	arcpy.ProjectRaster_management(outCnHigh1, outCnHigh, wtm, 'BILINEAR', outRes)
 
-def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, watershedFile\
-	, nonContributingAreasFile, demFinalFile, tempDir, tempGdb):
+def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, watershedFile, \
+	nonContributingAreasFile, demFinalFile, tempDir, tempGdb):
 
 	setupTemp(tempDir,tempGdb)
 
@@ -463,18 +471,20 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	demFinal = Con(IsNull(nonContributingAreasFile), demFile)
 	demFinal.save(demFinalFile)
 
-def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile\
-	, grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
-
+def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
+	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
+	
 	os.environ['ARCTMPDIR'] = tempDir
-
+	
+	setupTemp(tempDir,tempGdb)
+	
 	env.workspace = tempDir
 	env.scratchWorkspace = tempDir
-
-	if grassWaterwaysFile != '':
-		demRunoff = Con(IsNull(grassWaterwaysFile), demFile)
-	else:
+	
+	if grassWaterwaysFile is None or grassWaterwaysFile not in ['', '#']:
 		demRunoff = Raster(demFile)
+	else:
+		demRunoff = Con(IsNull(grassWaterwaysFile), demFile)
 
 	arcpy.AddMessage("Converting to ASCII...")
 	asciiDem = tempDir + "/dem.asc"
@@ -498,6 +508,8 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 
 	os.environ['ARCTMPDIR'] = tempDir
 
+	setupTemp(tempDir,tempGdb)
+
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
 	env.snapRaster = demFile
@@ -505,12 +517,17 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 	env.cellSize = demFile
 	env.mask = demFile
 
+	arcpy.AddMessage('Calculating slope...')
 	G = Slope(demFile, "DEGREE") * (math.pi / 180.0)
+	arcpy.AddMessage('Calculating flow accumulation...')
 	fac = FlowAccumulation(FlowDirection(fillFile))
+	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
 	facLand = Plus(Con(fac < facThreshold, fac), 1.0)
+	arcpy.AddMessage('Converting flow accumulation to contributing area...')
 	CA = facLand * float(env.cellSize)**2
 
 	del fac, facLand
+	arcpy.AddMessage('Calculating stream power index...')
 	innerTerm = Con(BooleanAnd(IsNull(CA * Tan(G)),(Raster(demFile) > 0)),1,((CA * Tan(G)) + 1))
 		
 	spi = Ln(innerTerm)
@@ -563,9 +580,11 @@ def makeTableFromAggregatedData(dataDict, tableFile):
 		rows.insertRow(row)
 	del row, rows
 
-def rasterizeKfactor(gssurgoGdb, attField, demFile, outRaster, tempDir, tempGdb):
+def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, tempDir, tempGdb):
 	randId = str(random.randint(1e5,1e6))
 	os.environ['ARCTMPDIR'] = tempDir
+
+	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -610,6 +629,8 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 
 	os.environ['ARCTMPDIR'] = tempDir
 
+	setupTemp(tempDir,tempGdb)
+
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
 	
@@ -627,6 +648,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	if downloadBool == 'true':
 		arcpy.AddMessage("Downloading Cropland Data Layers...")
 		cdlTiffs = downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid)
+		years = range(int(yrStart), int(yrEnd) + 1)
 	else:
 		arcpy.AddMessage("Clipping Cropland Data Layers to watershed extent...")
 		localCdlList = localCdlList.split(';')
@@ -780,10 +802,77 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	arcpy.ProjectRaster_management(outHigh1, outHigh, wtm, 'BILINEAR', outRes)
 	arcpy.ProjectRaster_management(outLow1, outLow, wtm, 'BILINEAR', outRes)
 
-def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile\
-	, outSummaryTable, tempDir, tempGdb):
+def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile, \
+	facThreshold, outFile, tempDir, tempGdb):
+
+	setupTemp(tempDir,tempGdb)
+	os.environ['ARCTMPDIR'] = tempDir
+
+	env.scratchWorkspace = tempDir
+	env.workspace = tempDir
+	env.snapRaster = demFile
+	env.extent = demFile
+	env.mask = demFile
+	
+	origRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
+	
+	# Temp files
+	resampleDemFile = tempGdb +  "/resample"
+	resampleFillFile = tempGdb + "/resampleFill"
+	lsFile = tempGdb + "/ls"
+	
+	# Resample the dem to 10-meter resolution (use linear interpolation resample method)
+	arcpy.AddMessage("Resampling conditioned DEM...")
+	arcpy.Resample_management(demFile, resampleDemFile, "10", "BILINEAR")
+	arcpy.AddMessage("Resampling re-conditioned DEM...")
+	arcpy.Resample_management(fillFile, resampleFillFile, "10", "BILINEAR")
+	env.cellSize = resampleDemFile
+	arcpy.AddMessage("Re-filling re-conditioned DEM...")
+	refill = Fill(resampleFillFile)
+	
+	arcpy.AddMessage("Calcuating LS-factor from grid. This may take awhile...")
+	fac = FlowAccumulation(FlowDirection(refill))
+	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
+	facLand = Plus(Con(fac < facThreshold, fac), 1.0)
+	del fac
+	Am = facLand * 100
+	del facLand
+	arcpy.AddMessage('Calculating br term of slope/slope-length equation...')
+	br = Slope(resampleDemFile, "DEGREE") * (math.pi / 180.0)
+	
+	a0 = 22.1
+	m = 0.6
+	n = 1.3
+	b0 = 0.09
+	arcpy.AddMessage('Calculating slope/slope-length...')
+	LS10  =  (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
+	del a0, m, n, b0
+	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
+	del LS10
+	
+	env.cellSize = demFile
+	arcpy.AddMessage("Calculating Soil Loss...")
+	if erosivityConstant is None and erosivityFile is None:
+		R = 1
+	elif erosivityConstant == '':
+		R = Raster(erosivityFile)
+	else:
+		R = float(erosivityConstant)
+	K = Raster(kFactorFile)
+	C = Raster(cFactorFile)
+	LS = Con(BooleanAnd(IsNull(lsFile),(Raster(demFile) > 0)), 0, lsFile)
+
+	E = R * K * LS * C
+
+	E.save(outFile)
+	del E, R, K, LS, C
+
+def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, \
+	outSummaryTable, tempDir, tempGdb):
 
 	os.environ['ARCTMPDIR'] = tempDir
+
+	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -798,7 +887,7 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	
 	lnUsle = Ln(Raster(usleFile) + 1)
 	spi = Raster(spiFile)
-
+	
 	spiMean = float(arcpy.GetRasterProperties_management(spi, "MEAN").getOutput(0))
 	spiSd = float(arcpy.GetRasterProperties_management(spi, "STD").getOutput(0))
 	usleMean = float(arcpy.GetRasterProperties_management(lnUsle, "MEAN").getOutput(0))
@@ -836,7 +925,7 @@ class Toolbox(object):
 			rasterizeKfactorForUsle,
 			rasterizeCfactorForUsle,
 			calculateSoilLossUsingUsle,
-			calculateErosionScore]
+			erosionScore]
 
 class conditionTheLidarDem(object):
 	def __init__(self):
@@ -852,6 +941,7 @@ class conditionTheLidarDem(object):
 			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
+		param0.filter.list = ["Polyline"]
 
 		param1 = arcpy.Parameter(
 			displayName="Watershed area (unbuffered)",
@@ -859,6 +949,7 @@ class conditionTheLidarDem(object):
 			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
+		param1.filter.list = ["Polygon"]
 
 		param2 = arcpy.Parameter(
 			displayName="Raw LiDAR DEM",
@@ -1002,6 +1093,9 @@ class createCurveNumberRaster(object):
 			datatype="GPString",
 			parameterType="Optional",
 			direction="Input")
+		param1.filter.type = "ValueList"
+		param1.filter.list = range(2008,2013)
+		param1.value = 2008
 
 		param2 = arcpy.Parameter(
 			displayName="End year (2012 is recommended)",
@@ -1009,6 +1103,9 @@ class createCurveNumberRaster(object):
 			datatype="GPString",
 			parameterType="Optional",
 			direction="Input")
+		param2.filter.type = "ValueList"
+		param2.filter.list = range(2009,2014)
+		param2.value = 2012
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",
@@ -1024,6 +1121,7 @@ class createCurveNumberRaster(object):
 			datatype="DEWorkspace",
 			parameterType="Required",
 			direction="Input")
+		param4.filter.list = ["Local Database"]
 
 		param5 = arcpy.Parameter(
 			displayName="Watershed area (buffered)",
@@ -1031,6 +1129,7 @@ class createCurveNumberRaster(object):
 			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
+		param5.filter.list = ["Polygon"]
 
 		param6 = arcpy.Parameter(
 			displayName="Raster template",
@@ -1138,6 +1237,7 @@ class internallyDrainingAreas(object):
 			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
+		param4.filter.list = ["Polygon"]
 
 		param5 = arcpy.Parameter(
 			displayName="Output internally draining areas",
@@ -1210,7 +1310,7 @@ class demReconditioning(object):
 			direction="Input")
 
 		param2 = arcpy.Parameter(
-			displayName='Additional "non-contributing" areas (e.g., grass waterways)',
+			displayName='Additional "non-contributing" areas raster (e.g., grass waterways)',
 			name="additional_non_contributing_areas",
 			datatype="GPRasterLayer",
 			parameterType="Optional",
@@ -1335,6 +1435,7 @@ class rasterizeKfactorForUsle(object):
 			datatype="DEWorkspace",
 			parameterType="Required",
 			direction="Input")
+		param0.filter.list = ["Local Database"]
 
 		param1 = arcpy.Parameter(
 			displayName="K-factor field",
@@ -1356,7 +1457,8 @@ class rasterizeKfactorForUsle(object):
 			name="watershed_area",
 			datatype="GPFeatureLayer",
 			parameterType="Required",
-			direction="Output")
+			direction="Input")
+		param3.filter.list = ["Polygon"]
 
 		param4 = arcpy.Parameter(
 			displayName="Output K-factor raster",
@@ -1394,7 +1496,7 @@ class rasterizeKfactorForUsle(object):
 		watershedFile = parameters[3].valueAsText
 		outRaster = parameters[4].valueAsText
 
-		rasterizeKfactor(gssurgoGdb, attField, demFile, outRaster, tempDir, tempGdb)
+		rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, tempDir, tempGdb)
 
 class rasterizeCfactorForUsle(object):
 	def __init__(self):
@@ -1418,6 +1520,9 @@ class rasterizeCfactorForUsle(object):
 			datatype="GPString",
 			parameterType="Optional",
 			direction="Input")
+		param1.filter.type = "ValueList"
+		param1.filter.list = range(2008,2013)
+		param1.value = 2008
 
 		param2 = arcpy.Parameter(
 			displayName="End year (2012 is recommended)",
@@ -1425,6 +1530,9 @@ class rasterizeCfactorForUsle(object):
 			datatype="GPString",
 			parameterType="Optional",
 			direction="Input")
+		param2.filter.type = "ValueList"
+		param2.filter.list = range(2009,2014)
+		param2.value = 2012
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",
@@ -1441,6 +1549,7 @@ class rasterizeCfactorForUsle(object):
 			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
+		param4.filter.list = ["Polygon"]
 
 		param5 = arcpy.Parameter(
 			displayName="Raster template",
@@ -1621,7 +1730,7 @@ class calculateSoilLossUsingUsle(object):
 		usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile\
 			, facThreshold, outFile, tempDir, tempGdb)
 
-class calculateErosionScore(object):
+class erosionScore(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
 		self.label = "6. Calculate erosion score"
@@ -1649,6 +1758,7 @@ class calculateErosionScore(object):
 			datatype="GPFeatureLayer",
 			parameterType="Optional",
 			direction="Input")
+		param2.filter.list = ["Polygon"]
 
 		param3 = arcpy.Parameter(
 			displayName="Zonal statistic field",
@@ -1720,7 +1830,5 @@ class calculateErosionScore(object):
 		outErosionScoreFile = parameters[5].valueAsText
 		outSummaryTable = parameters[6].valueAsText
 		
-		calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile\
-			, outSummaryTable, tempDir, tempGdb)
-		
-		
+		calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, \
+			outSummaryTable, tempDir, tempGdb)
