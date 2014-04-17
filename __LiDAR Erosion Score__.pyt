@@ -229,6 +229,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 
 def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
 	cts = np.array(coverTypeLookup[lc][scen])
+	hsg = map(str, hsg)
 	if len(cts) == 0:
 		return None
 	if scen == 'high':
@@ -400,7 +401,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	env.mask = demFile
 	
 	wtm = arcpy.Describe(demFile).spatialReference
-	outRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))		
+	outRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 	arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
 	arcpy.ProjectRaster_management(outCnHigh1, outCnHigh, wtm, 'BILINEAR', outRes)
 
