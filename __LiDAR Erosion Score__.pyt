@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import urllib
+import ftplib
 import zipfile
 import time
 import shutil
@@ -24,6 +25,7 @@ cnLookupFile = sys.path[0] + '/etc/curveNumberLookup.csv'
 legendFile = sys.path[0] + '/etc/cdlLegend.csv'
 cFactorXwalkFile = sys.path[0] + '/etc/cFactorLookup.csv'
 coverTypeLookupFile = sys.path[0] + '/etc/coverTypeLookup.json'
+rotationSymbologyFile = sys.path[0] + '/etc/rotationSymbology.lyr'
 tempGdb = tempDir + '/scratch.gdb'
 
 startupinfo = subprocess.STARTUPINFO()
@@ -72,10 +74,6 @@ def setupTemp(tempDir,tempGdb):
 			and re-run the tool'
 		for tempFile in tempFiles:
 			arcpy.AddMessage('Deleting ' + tempFile + '...')
-			# if arcpy.TestSchemaLock(tempFile):
-				# arcpy.AddMessage('Schema lock on file. Try deleting scratch.gdb files manually. \
-					# Skipping...')
-				# continue
 			try:
 				arcpy.Delete_management(tempFile)
 			except:
@@ -159,35 +157,53 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 	for dataset in [lidarClip, lidarResample, lidarPt]:
 		arcpy.Delete_management(dataset)
 
-def preparePrecipData(frequency, duration, rasterTemplateFile, outPrcp, tempDir, tempGdb):
+def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
+	tempDir, tempGdb):
+	
 	setupTemp(tempDir,tempGdb)
 	
 	rid = str(random.randint(11111,99999))
 
 	os.environ['ARCTMPDIR'] = tempDir
-
-	# INPUT DATA
-	# URL for ascii grid of the 10-year 24-hour rainfall event
-	ftpDir = 'ftp://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
-	prcpUrl = ftpDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
-	arcpy.AddMessage(prcpUrl)
-	transformation = 'NAD_1983_To_HARN_Wisconsin'
-	downloadsFolder = tempDir
+	
 	# Intermediate data
 	prcpFile = tempGdb + '/prcp_' + rid
 	prcpPrjFile = tempGdb + '/prcpPrj_' + rid
 	prcpAscii = tempDir + '/prcpRaw_' + rid + '.asc'
-
-	# Download Prcp data, read data from archive, save backup
-	asciiArchive = downloadsFolder + '/mw' + frequency + 'yr' + duration + 'ha.zip'
-	asciiFile = downloadsFolder + '/mw' + frequency + 'yr' + duration + 'ha.asc'
-	urllib.urlretrieve(prcpUrl, asciiArchive)
-	zf = zipfile.ZipFile(asciiArchive, 'r')
-	asciiData = zf.read('mw' + frequency + 'yr' + duration + 'ha.asc')
+	
+	transformation = 'NAD_1983_To_HARN_Wisconsin'
+	
+	if downloadBool == 'true':
+		# URL for ascii grid of the 10-year 24-hour rainfall event
+		ftpDir = 'ftp://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
+		prcpUrl = ftpDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
+		try:
+			ftp = ftplib.FTP('hdsc.nws.noaa.gov')
+		except:
+			arcpy.AddMessage('Your machine is not able to establish a connection to the Precipitation \
+				Frequency Data Server (PFDS) at NOAA. Either the server is down, or your internet \
+				connection is not allowing a direct connection. Please try again later to test if the \
+				server is down. Otherwise, try downloading from different internet connection.')
+			arcpy.AddMessage('The file you need is:')
+			arcpy.AddMessage(precpUrl)
+			arcpy.AddError()
+		# Download Prcp data, read data from archive, save backup
+		asciiArchive = tempDir + '/mw' + frequency + 'yr' + duration + 'ha.zip'
+		# asciiFile = tempDir + '/mw' + frequency + 'yr' + duration + 'ha.asc'
+		arcpy.AddMessage("Downloading " + prcpUrl + "...")
+		urllib.urlretrieve(prcpUrl, asciiArchive)
+		zf = zipfile.ZipFile(asciiArchive, 'r')
+	else:
+		zf = zipfile.ZipFile(localCopy, 'r')
+		# asciiFile = tempDir + '/' + zf.namelist()[0].replace('zip', 'asc')
+	arcpy.AddMessage("Reading ASCII frequency-duration data...")
+	asciiData = zf.read(zf.namelist()[0])
 	zf.close()
+	arcpy.AddMessage("Writing ASCII data to file...")
 	f = open(prcpAscii, 'w')
 	f.write(asciiData)
 	f.close()
+	arcpy.AddMessage("Converting ASCII data to temporary raster...")
 	arcpy.ASCIIToRaster_conversion(prcpAscii, prcpFile, 'INTEGER')
 	
 	cs = arcpy.SpatialReference('NAD 1983')
@@ -197,18 +213,19 @@ def preparePrecipData(frequency, duration, rasterTemplateFile, outPrcp, tempDir,
 	env.cellSize = rasterTemplateFile
 	env.mask = rasterTemplateFile
 	env.extent = rasterTemplateFile
-
+	
+	arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
 	arcpy.ProjectRaster_management(prcpFile, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
 		, rasterTemplateFile, transformation)
 
 	rasterTemplate = Raster(rasterTemplateFile)
 	prcp = Raster(prcpPrjFile)
+	arcpy.AddMessage("Masking frequency-duration raster to watershed area...")
 	prcpClip = Con(rasterTemplate, prcp)
+	arcpy.AddMessage("Saving output...")
 	prcpClip.save(outPrcp)
 
 	del rasterTemplate, prcp, prcpClip
-	arcpy.Delete_management(prcpFile)
-	arcpy.Delete_management(prcpPrjFile)
 
 def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
 	cts = np.array(coverTypeLookup[lc][scen])
@@ -269,9 +286,9 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 
 	os.environ['ARCTMPDIR'] = tempDir
 
-	# Intermediate files
 	rid = str(random.randint(10000,99999))
-	arcpy.AddMessage("Process ID " + rid)
+
+	# Intermediate files
 	years = range(int(yrStart), int(yrEnd) + 1)
 	watershedCdlPrj = tempGdb + '/watershedCdlPrj_' + rid
 	clipSSURGO = tempGdb + '/clipSSURGO_' + rid
@@ -869,7 +886,8 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 
 def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, \
 	outSummaryTable, tempDir, tempGdb):
-
+	
+	randId = str(random.randint(1e5,1e6))
 	os.environ['ARCTMPDIR'] = tempDir
 
 	setupTemp(tempDir,tempGdb)
@@ -879,34 +897,41 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = demFile
-
+	
+	arcpy.AddMessage("Converting zones to raster...")
 	zonal = arcpy.PolygonToRaster_conversion(zonalFile, zonalId, tempGdb + '/zonalRaster'\
 		, 'CELL_CENTER', '', demFile)
 	
 	env.mask = tempGdb + '/zonalRaster'
 	
+	arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
 	lnUsle = Ln(Raster(usleFile) + 1)
 	spi = Raster(spiFile)
+	
+	arcpy.CalculateStatistics_management(spi)
+	arcpy.CalculateStatistics_management(lnUsle)
 	
 	spiMean = float(arcpy.GetRasterProperties_management(spi, "MEAN").getOutput(0))
 	spiSd = float(arcpy.GetRasterProperties_management(spi, "STD").getOutput(0))
 	usleMean = float(arcpy.GetRasterProperties_management(lnUsle, "MEAN").getOutput(0))
 	usleSd = float(arcpy.GetRasterProperties_management(lnUsle, "STD").getOutput(0))
 
+	arcpy.AddMessage("Calculating Z-scores...")
 	spiZ = (spi - spiMean) / spiSd
 	usleZ = (lnUsle - usleMean) / usleSd
+	arcpy.AddMessage("Calculating erosion score index...")
 	erosionScore = spiZ + usleZ
 
-	if not outErosionScoreFile in ('', '#'):
+	if outErosionScoreFile is not None:
 		erosionScore.save(outErosionScoreFile)
-	if not zonalFile == '':
-		# get field data type
-		fields = arcpy.ListFields(tempGdb + '/zonalRaster', zonalId)
-		if len(fields) != 0:
-			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', zonalId, erosionScore\
-				, outSummaryTable, "DATA", "ALL")
+	if zonalFile is not None:
+		arcpy.AddMessage("Summarizing erosion score index within zonal statistics feature class boundaries...")
+		fields = arcpy.ListFields(tempGdb + '/zonalRaster')
+		if len(fields) == 3:
+			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', 'Value', erosionScore\
+					, outSummaryTable, "DATA", "ALL")
 		else:
-			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', 'VALUE', erosionScore\
+			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', zonalId, erosionScore\
 				, outSummaryTable, "DATA", "ALL")
 
 class Toolbox(object):
@@ -1011,38 +1036,54 @@ class downloadPrecipitationData(object):
 
 	def getParameterInfo(self):
 		param0 = arcpy.Parameter(
+		displayName= "Download frequency-duration data? If yes, define freqency and duration below.",
+		name="download_frequency_duration",
+		datatype="GPBoolean",
+		parameterType="Required",
+		direction="Input")
+		param0.value = 1
+		
+		param1 = arcpy.Parameter(
 			displayName="Frequency (years)",
 			name="frequency",
 			datatype="GPString",
-			parameterType="Required",
+			parameterType="Optional",
 			direction="Input")
-		param0.filter.type = "ValueList"
-		param0.filter.list = [1, 2, 5, 10, 25, 50, 100, 200, 500, 1000]
+		param1.filter.type = "ValueList"
+		param1.filter.list = [1, 2, 5, 10, 25, 50, 100, 200, 500, 1000]
 
-		param1 = arcpy.Parameter(
+		param2 = arcpy.Parameter(
 			displayName="Duration (hours)",
 			name="duration",
 			datatype="GPString",
-			parameterType="Required",
+			parameterType="Optional",
 			direction="Input")
-		param1.filter.type = "ValueList"
-		param1.filter.list = [2, 3, 6, 12, 24]
+		param2.filter.type = "ValueList"
+		param2.filter.list = [2, 3, 6, 12, 24]
+		
+		param3 = arcpy.Parameter(
+			displayName="Locally stored frequency-duration data (zip file)",
+			name="local_frequency_duration",
+			datatype="DEFile",
+			parameterType="Optional",
+			direction="Input")
+		param3.filter.list = ["zip"]
 
-		param2 = arcpy.Parameter(
+		param4 = arcpy.Parameter(
 			displayName="Raster template",
 			name="raster_template",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Input")
 
-		param3 = arcpy.Parameter(
+		param5 = arcpy.Parameter(
 			displayName="Output precipitation frequency-duration raster",
 			name="output_precipitation_raster",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
 
-		parameters = [param0, param1, param2, param3]
+		parameters = [param0, param1, param2, param3, param4, param5]
 		return parameters
 
 	def isLicensed(self):
@@ -1053,6 +1094,14 @@ class downloadPrecipitationData(object):
 		"""Modify the values and properties of parameters before internal
 		validation is performed.  This method is called whenever a parameter
 		has been changed."""
+		if parameters[0].value == 1:
+			parameters[1].enabled = 1
+			parameters[2].enabled = 1
+			parameters[3].enabled = 0
+		else:
+			parameters[1].enabled = 0
+			parameters[2].enabled = 0
+			parameters[3].enabled = 1
 		replaceSpacesWithUnderscores(parameters)
 		return
 
@@ -1064,12 +1113,15 @@ class downloadPrecipitationData(object):
 		return
 
 	def execute(self, parameters, messages):
-		frequency = parameters[0].valueAsText
-		duration = parameters[1].valueAsText
-		rasterTemplateFile = parameters[2].valueAsText
-		outPrcp = parameters[3].valueAsText
+		downloadBool = parameters[0].valueAsText
+		frequency = parameters[1].valueAsText
+		duration = parameters[2].valueAsText
+		localCopy = parameters[3].valueAsText
+		rasterTemplateFile = parameters[4].valueAsText
+		outPrcp = parameters[5].valueAsText
 		
-		preparePrecipData(frequency, duration, rasterTemplateFile, outPrcp, tempDir, tempGdb)
+		preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, \
+			outPrcp, tempDir, tempGdb)
 
 class createCurveNumberRaster(object):
 	def __init__(self):
@@ -1564,6 +1616,7 @@ class rasterizeCfactorForUsle(object):
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
+		param6.symbology = rotationSymbologyFile
 
 		param7 = arcpy.Parameter(
 			displayName="Output C-factor raster (high estimate)",
