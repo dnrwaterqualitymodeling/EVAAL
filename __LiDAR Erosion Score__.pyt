@@ -430,7 +430,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	arcpy.AddMessage("Identifying sinks...")
 	fill = Fill(demFile)
 	sinkDepth = fill - Raster(demFile)
-	A = float(env.cellSize)**2  # area of a gridcell
+	# area of a gridcell
+	A = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))**2
 	storageVolume = sinkDepth * A
 	sinkExtent = Con(sinkDepth > 0, 1)
 	sinkGroup = RegionGroup(sinkExtent, "EIGHT", '', 'NO_LINK')
