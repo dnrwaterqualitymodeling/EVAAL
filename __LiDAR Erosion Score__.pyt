@@ -361,18 +361,18 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	ptCount = int(arcpy.GetCount_management(joinSsurgo).getOutput(0))
 	msg = "Generalizing rotation from crop sequence, and applying a C-factor..."
 	arcpy.SetProgressor("step", msg, 0, ptCount, 1)
-	rows = arcpy.UpdateCursor(joinSsurgo)
+	rows = arcpy.da.UpdateCursor(joinSsurgo, ['hydgrpdcd'] + yrCols + ['cnLow', 'cnHigh'])
 	for row in rows:
-		if row.hydgrpdcd is None:
+		if row[0] is None:
 			hsg = ['A','B','C','D']
 		else:
-			hsg = [str(row.hydgrpdcd[0])]
+			hsg = [str(row[0][0])]
 		lcs = []
-		for yrCol in yrCols:
-			if row.getValue(yrCol) is None:
+		for y in range(1,len(yrCols)+1):
+			if row[y] is None:
 				lcs.append('0')
 			else:
-				lcs.append(str(row.getValue(yrCol)))
+				lcs.append(str(row[y]))
 		cnsHigh = []
 		cnsLow = []
 		for lc in lcs:	
@@ -383,8 +383,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 				elif scen == 'high' and cn is not None:
 					cnsHigh.append(cn)
 		if (len(cnsHigh) > 0) and (len(cnsLow) > 0):
-			row.cnLow = np.mean(cnsLow)
-			row.cnHigh = np.mean(cnsHigh)
+			row[len(yrCols) + 1] = np.mean(cnsLow)
+			row[len(yrCols) + 2] = np.mean(cnsHigh)
 		rows.updateRow(row)
 		arcpy.SetProgressorPosition()
 	arcpy.ResetProgressor()

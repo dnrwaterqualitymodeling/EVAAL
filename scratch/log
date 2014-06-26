@@ -1,0 +1,4 @@
+201406161432   0     1     0ruesca K:\workInProgress\lidarTargetingTools\scratch\Fill_resampl1 = FILLSINK(K:\workInProgress\lidarTargetingTools\scratch\scratch.gdb
+201406161432   0     1     0ruesca K:\workInProgress\lidarTargetingTools\scratch\FlowDir_Fill1 = FLOWDIRECTION(K:\workInProgress\lidarTargetingTools\scratch\Fill_r
+201406161432   0     4     0ruesca K:\workInProgress\lidarTargetingTools\scratch\FlowAcc_Flow1 = FLOWACCUMULATION(K:\workInProgress\lidarTargetingTools\scratch\Flo
+201406161457   0     0     0ruesca K:\workInProgress\lidarTargetingTools\scratch\Slope_resamp1 = SLOPE(K:\workInProgress\lidarTargetingTools\scratch\scratch.gdb\resample,  1.0, DEGREE)
