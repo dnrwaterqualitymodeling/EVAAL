@@ -26,8 +26,10 @@ legendFile = sys.path[0] + '/etc/cdlLegend.csv'
 cFactorXwalkFile = sys.path[0] + '/etc/cFactorLookup.csv'
 coverTypeLookupFile = sys.path[0] + '/etc/coverTypeLookup.json'
 rotationSymbologyFile = sys.path[0] + '/etc/rotationSymbology.lyr'
-tempGdb = tempDir + '/scratch.gdb'
 
+#if env.workspace is None and env.scratchWorkspace is None:
+tempGdb = tempDir + '/scratch.gdb'
+	
 startupinfo = subprocess.STARTUPINFO()
 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -35,9 +37,11 @@ def checkForSpaces(parameters):
 	for p in parameters:
 		if p.value:
 			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer', 'Table']:
-				path = arcpy.Describe(p.value).catalogPath
-				if ' ' in path:
-					p.setErrorMessage("Spaces are not allowed in dataset path.")
+				# Value of paramater can only be string type. Doesn't work for multivalue
+				if type(p.value) == str:
+					path = arcpy.Describe(p.value).catalogPath
+					if ' ' in path:
+						p.setErrorMessage("Spaces are not allowed in dataset path.")
 
 def replaceSpacesWithUnderscores(parameters):
 	for p in parameters:
@@ -51,10 +55,12 @@ def checkProjectionsOfInputs(parameters):
 	for p in parameters:
 		if p.value:
 			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer']:
-				cs = arcpy.Describe(p.value).spatialReference.name
-				if cs != 'NAD_1983_HARN_Transverse_Mercator':
-					p.setErrorMessage('Dataset must be projected in \
-						NAD_1983_HARN_Transverse_Mercator coordinate system.')
+				# Value of paramater can only be string type. Doesn't work for multivalue
+				if type(p.value) == str:
+					cs = arcpy.Describe(p.value).spatialReference.name
+					if cs != 'NAD_1983_HARN_Transverse_Mercator':
+						p.setErrorMessage('Dataset must be projected in \
+							NAD_1983_HARN_Transverse_Mercator coordinate system.')
 
 def setupTemp(tempDir,tempGdb):
 	if not os.path.exists(tempGdb):
@@ -159,8 +165,9 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
 	tempDir, tempGdb):
-	
 	setupTemp(tempDir,tempGdb)
+	
+	
 	
 	rid = str(random.randint(11111,99999))
 
@@ -208,23 +215,39 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	
 	cs = arcpy.SpatialReference('NAD 1983')
 	arcpy.DefineProjection_management(prcpFile, cs)
-
-	env.snapRaster = rasterTemplateFile
-	env.cellSize = rasterTemplateFile
-	env.mask = rasterTemplateFile
-	env.extent = rasterTemplateFile
 	
-	arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
-	arcpy.ProjectRaster_management(prcpFile, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
-		, rasterTemplateFile, transformation)
+	
+	
+	
+	env.cellSize = rasterTemplateFile
+	env.mask = rasterTemplateFile 
+	env.extent = rasterTemplateFile
+	arcpy.AddMessage("Clipping to extent...")
+	prcpFileClp = prcpFile + '_clipped'
+	arcpy.Clip_management(prcpFile, "#", prcpFileClp, rasterTemplateFile, "#", "None")
+	#added 1045 2014-7-9
+	clSz = str(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
 
+	#at 1045 2014-7-9
+	#changed a second 'rasterTemplateFile' to clSz 
+	#	thinking being that maybe it can't read the cell size from the raster
+	arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
+										
+	arcpy.ProjectRaster_management(prcpFileClp, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
+		, clSz, transformation)
+	arcpy.AddMessage('Finished projecting')
+	env.snapRaster = rasterTemplateFile #no causes it to freeze
 	rasterTemplate = Raster(rasterTemplateFile)
 	prcp = Raster(prcpPrjFile)
 	arcpy.AddMessage("Masking frequency-duration raster to watershed area...")
 	prcpClip = Con(rasterTemplate, prcp)
 	arcpy.AddMessage("Saving output...")
-	prcpClip.save(outPrcp)
-
+	try:
+		prcpClip.save(outPrcp)
+	except:
+		arcpy.AddMessage("Could not save, try saving your file to a \
+			geodatabase(.gdb) or reduce the number of characters.")
+		raise Exception("Too many characters in file name")
 	del rasterTemplate, prcp, prcpClip
 
 def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
@@ -258,7 +281,8 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 	if ping == 1:
 		arcpy.AddError('The CropScape server is down. Please try again later, or download local \
 			Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
-	cdlTiffs = []
+	#unclipped 
+	cdlTiffs_fl = []
 	for year in years:
 		year = str(year)
 		clipUrl = cdlUrl\
@@ -277,7 +301,16 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 			urllib.urlretrieve(tiffUrl, downloadTiff)
 		except:
 			arcpy.AddError("The CropScape server failed. Please download the layers to your hard drive at http://www.nass.usda.gov/research/Cropland/Release/index.htm")
-		cdlTiffs.append(downloadTiff)
+		cdlTiffs_fl.append(downloadTiff)
+	
+	# For clipping to watershed extent
+	cdlTiffs = []
+	for i,fullCdl in enumerate(cdlTiffs_fl):
+			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'
+					#testing the ClippingGeometry option..  
+			arcpy.Clip_management(fullCdl, '', clipCdl, watershedCdlPrj, '#', 'ClippingGeometry')
+			cdlTiffs.append(clipCdl)
+			
 	return cdlTiffs
 
 def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFile, \
@@ -361,18 +394,18 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	ptCount = int(arcpy.GetCount_management(joinSsurgo).getOutput(0))
 	msg = "Generalizing rotation from crop sequence, and applying a C-factor..."
 	arcpy.SetProgressor("step", msg, 0, ptCount, 1)
-	rows = arcpy.UpdateCursor(joinSsurgo)
+	rows = arcpy.da.UpdateCursor(joinSsurgo, ['hydgrpdcd'] + yrCols + ['cnLow', 'cnHigh'])
 	for row in rows:
-		if row.hydgrpdcd is None:
+		if row[0] is None:
 			hsg = ['A','B','C','D']
 		else:
-			hsg = [str(row.hydgrpdcd[0])]
+			hsg = [str(row[0][0])]
 		lcs = []
-		for yrCol in yrCols:
-			if row.getValue(yrCol) is None:
+		for y in range(1,len(yrCols)+1):
+			if row[y] is None:
 				lcs.append('0')
 			else:
-				lcs.append(str(row.getValue(yrCol)))
+				lcs.append(str(row[y]))
 		cnsHigh = []
 		cnsLow = []
 		for lc in lcs:	
@@ -383,8 +416,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 				elif scen == 'high' and cn is not None:
 					cnsHigh.append(cn)
 		if (len(cnsHigh) > 0) and (len(cnsLow) > 0):
-			row.cnLow = np.mean(cnsLow)
-			row.cnHigh = np.mean(cnsHigh)
+			row[len(yrCols) + 1] = np.mean(cnsLow)
+			row[len(yrCols) + 2] = np.mean(cnsHigh)
 		rows.updateRow(row)
 		arcpy.SetProgressorPosition()
 	arcpy.ResetProgressor()
@@ -435,9 +468,12 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	storageVolume = sinkDepth * A
 	sinkExtent = Con(sinkDepth > 0, 1)
 	sinkGroup = RegionGroup(sinkExtent, "EIGHT", '', 'NO_LINK')
+	# to give each non contributing area the MAX depth in the area
 	maxDepth = ZonalStatistics(sinkGroup, "Value", sinkDepth, "MAXIMUM", "DATA")
 	prcpMeters = Raster(prcpFile) * 0.0000254
+	# to assign the mean precip level to each noncontrib area
 	meanPrecip = ZonalStatistics(sinkGroup, "Value", prcpMeters, "MEAN", "DATA")
+	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
 
@@ -454,11 +490,13 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 
 	arcpy.AddMessage("Comparing runoff to sink capacity...")
 	arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
-
+		#Grab the maximum amount of runoff for each sink
 	ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
+		#Grab the total of the storage volume for each sink
 	ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
 
 	arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
+		# create new table, IF the total storage volume is greater than the max erosion
 	arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
 	trueSinks = []
@@ -476,13 +514,19 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
 	arcpy.MakeFeatureLayer_management(nonContribRaw, 'nonContribRaw_layer')
 	arcpy.MakeFeatureLayer_management(watershedFile, 'watershed_layer')
+		# To select those nonContributing watersheds that are within the target watershed
 	arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
 		, '', 'NEW_SELECTION')
 	arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
-	arcpy.PolygonToRaster_conversion(nonContribFiltered, 'grid_code'\
+		#Convert only those nonContributing watersheds that are in the target to rasters
+			#grid_code for 10.1 and gridcode for 10.2
+	if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
+		colNm = 'gridcode' 
+	else:
+		colNm = 'grid_code'
+	arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
 		, nonContribUngrouped, 'CELL_CENTER', '', demFile)
-	noId = Reclassify(nonContribUngrouped, "Value"\
-		, RemapRange([[1,1000000000000000,1]]))
+	noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
 
 	grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
 	grouped.save(nonContributingAreasFile)
@@ -645,7 +689,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 
 def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
 	outRotation, outHigh, outLow, legendFile, cFactorXwalkFile, tempDir, tempGdb):
-
+	
 	os.environ['ARCTMPDIR'] = tempDir
 
 	setupTemp(tempDir,tempGdb)
@@ -674,8 +718,8 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		cdlTiffs = []
 		years = []
 		for i,localCdl in enumerate(localCdlList):
-			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'
-			arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj)
+			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'  
+			arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj, '#', 'ClippingGeometry')
 			cdlTiffs.append(clipCdl)
 			years.append(i)
 			
@@ -815,6 +859,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 
 	wtm = arcpy.Describe(rasterTemplateFile).spatialReference	
 	outRes = int(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
+	env.mask = rasterTemplateFile
 	env.snapRaster = rasterTemplateFile
 	env.extent = rasterTemplateFile
 	arcpy.ProjectRaster_management(outRotation1, outRotation, wtm, 'NEAREST', outRes)
@@ -901,10 +946,14 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	env.cellSize = demFile
 	
 	arcpy.AddMessage("Converting zones to raster...")
-	zonal = arcpy.PolygonToRaster_conversion(zonalFile, zonalId, tempGdb + '/zonalRaster'\
-		, 'CELL_CENTER', '', demFile)
+	if zonalId is None:
+		zonalId = 'OBJECTID' 
+	if zonalFile is not None:
+		
+		zonal = arcpy.PolygonToRaster_conversion(zonalFile, zonalId, tempGdb + '/zonalRaster'\
+			, 'CELL_CENTER', '', demFile)
 	
-	env.mask = tempGdb + '/zonalRaster'
+		env.mask = tempGdb + '/zonalRaster'
 	
 	arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
 	lnUsle = Ln(Raster(usleFile) + 1)
@@ -986,14 +1035,14 @@ class conditionTheLidarDem(object):
 			direction="Input")
 
 		param3 = arcpy.Parameter(
-			displayName="Output conditioned DEM",
+			displayName="Output conditioned DEM, select output folder",
 			name="output_conditioned_dem",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
 
 		param4 = arcpy.Parameter(
-			displayName="Output optimized fill",
+			displayName="Output optimized fill, select output folder",
 			name="output_optimized_fill",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1072,14 +1121,14 @@ class downloadPrecipitationData(object):
 		param3.filter.list = ["zip"]
 
 		param4 = arcpy.Parameter(
-			displayName="Raster template",
+			displayName="Conditioned DEM (for template)",
 			name="raster_template",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Output precipitation frequency-duration raster",
+			displayName="Output precipitation frequency-duration raster, select output folder",
 			name="output_precipitation_raster",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1193,14 +1242,14 @@ class createCurveNumberRaster(object):
 			direction="Input")
 
 		param7 = arcpy.Parameter(
-			displayName="Output curve number raster (high estimate)",
+			displayName="Output curve number raster (high estimate), select output folder",
 			name="output_curve_number_high",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
 
 		param8 = arcpy.Parameter(
-			displayName="Output curve number raster (low estimate)",
+			displayName="Output curve number raster (low estimate), select output folder",
 			name="output_curve_number_low",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1294,14 +1343,14 @@ class internallyDrainingAreas(object):
 		param4.filter.list = ["Polygon"]
 
 		param5 = arcpy.Parameter(
-			displayName="Output internally draining areas",
+			displayName="Output internally draining areas, select output folder",
 			name="internally_draining_areas",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
 
 		param6 = arcpy.Parameter(
-			displayName="Output DEM excluding internally draining areas",
+			displayName="Output DEM excluding internally draining areas, select output folder",
 			name="dem_excluding_internally_draining_areas",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1371,7 +1420,7 @@ class demReconditioning(object):
 			direction="Input")
 
 		param3 = arcpy.Parameter(
-			displayName="Output Reconditioned DEM excluding internally draining areas",
+			displayName="Output Reconditioned DEM excluding internally draining areas, select output folder",
 			name="reconditioned_dem",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1439,7 +1488,7 @@ class calculateStreamPowerIndex(object):
 		param2.value = '50000'
 
 		param3 = arcpy.Parameter(
-			displayName="Output stream power index raster",
+			displayName="Output stream power index raster, select output folder",
 			name="stream_power_index_raster",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1515,7 +1564,7 @@ class rasterizeKfactorForUsle(object):
 		param3.filter.list = ["Polygon"]
 
 		param4 = arcpy.Parameter(
-			displayName="Output K-factor raster",
+			displayName="Output K-factor raster, select output folder",
 			name="k_factor_raster",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1606,14 +1655,14 @@ class rasterizeCfactorForUsle(object):
 		param4.filter.list = ["Polygon"]
 
 		param5 = arcpy.Parameter(
-			displayName="Raster template",
+			displayName="Conditioned DEM, for template",
 			name="raster_template",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Input")
 
 		param6 = arcpy.Parameter(
-			displayName="Output crop rotation raster",
+			displayName="Output crop rotation raster, select output folder",
 			name="crop_rotation_raster",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1621,14 +1670,14 @@ class rasterizeCfactorForUsle(object):
 		param6.symbology = rotationSymbologyFile
 
 		param7 = arcpy.Parameter(
-			displayName="Output C-factor raster (high estimate)",
+			displayName="Output C-factor raster (high estimate), select output folder",
 			name="output_c_factor_high",
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Output")
 
 		param8 = arcpy.Parameter(
-			displayName="Output C-factor raster (low estimate)",
+			displayName="Output C-factor raster (low estimate), select output folder",
 			name="output_c_factor_low",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1725,7 +1774,7 @@ class calculateSoilLossUsingUsle(object):
 			displayName="C-factor raster",
 			name="c_factor_raster",
 			datatype="GPRasterLayer",
-			parameterType="Optional",
+			parameterType="Required",
 			direction="Input")
 
 		param6 = arcpy.Parameter(
@@ -1831,14 +1880,14 @@ class erosionScore(object):
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Output erosion score raster",
+			displayName="Output erosion score raster, select output folder",
 			name="erosion_score_raster",
 			datatype="GPRasterLayer",
 			parameterType="Optional",
 			direction="Output")
 
 		param6 = arcpy.Parameter(
-			displayName="Output summary table",
+			displayName="Output summary table, select output folder",
 			name="output_summary_table",
 			datatype="DETable",
 			parameterType="Optional",
