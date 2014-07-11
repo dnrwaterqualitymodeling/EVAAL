@@ -462,9 +462,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
 	trueSinks = []
-	rows = arcpy.SearchCursor(trueSinkTable, '', '', 'Value')
+	rows = arcpy.da.SearchCursor(trueSinkTable, ['Value'])
 	for row in rows:
-		trueSinks.append(row.Value)
+		trueSinks.append(row[0])
 	del row, rows
 
 	arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
@@ -557,11 +557,11 @@ def aggregateByElement(tableName, attField, elemField, wtField, stat):
 	elem = np.empty(nRows, dtype='S15')
 	att = np.empty(nRows, dtype=np.float)
 	wt = np.empty(nRows, dtype=np.float)
-	rows = arcpy.SearchCursor(tableName)
+	rows = arcpy.da.SearchCursor(tableName, [elemField,attField,wtField])
 	for i,row in enumerate(rows):
-		elem[i] = row.getValue(elemField)
-		att[i] = row.getValue(attField)
-		wt[i] = row.getValue(wtField)
+		elem[i] = row[0]
+		att[i] = row[1]
+		wt[i] = row[2]
 	del i, row, rows
 	# Delete rows with nan values or weights equal to zero
 	if stat == 'wa':
