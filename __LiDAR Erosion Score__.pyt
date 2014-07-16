@@ -70,7 +70,7 @@ def setupTemp(tempDir,tempGdb):
 		arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
 	else:
 		env.workspace = tempGdb
-		tempFiles = arcpy.ListDatasets()
+		tempFiles = arcpy.ListDatasets() + arcpy.ListTables()
 		arcpy.AddMessage(' ')
 		arcpy.AddMessage('#################')
 		arcpy.AddMessage('Cleaning scratch space...')
@@ -441,16 +441,18 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, watershedFile, \
 	nonContributingAreasFile, demFinalFile, tempDir, tempGdb):
 
+	rid = str(random.randint(10000,99999))
+	
 	setupTemp(tempDir,tempGdb)
 
 	# Intermediate Files
-	clipCn = tempGdb + '/clipCn'
-	runoffTable = tempDir + '/runoffTable.dbf'
-	storageTable = tempDir + '/storageTable.dbf'
-	trueSinkTable = tempGdb + '/trueSinkTable'
-	nonContribRaw = tempGdb + '/nonContribRaw'
-	nonContribFiltered = tempGdb + '/nonContribFiltered'
-	nonContribUngrouped = tempGdb + '/nonContribUngrouped'
+	clipCn = tempGdb + '/clipCn_' + rid
+	runoffTable = tempDir + '/runoffTable_' + rid + '.dbf'
+	storageTable = tempDir + '/storageTable_' + rid + '.dbf'
+	trueSinkTable = tempGdb + '/trueSinkTable_' + rid
+	nonContribRaw = tempGdb + '/nonContribRaw_' + rid
+	nonContribFiltered = tempGdb + '/nonContribFiltered_' + rid
+	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -496,7 +498,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
 
 	arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
-		# create new table, IF the total storage volume is greater than the max erosion
+		# create new table, IF the total storage volume is greater than the max runoff
 	arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
 	trueSinks = []
@@ -894,7 +896,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	arcpy.AddMessage("Re-filling re-conditioned DEM...")
 	refill = Fill(resampleFillFile)
 	
-	arcpy.AddMessage("Calcuating LS-factor from grid. This may take awhile...")
+	arcpy.AddMessage("Calculating LS-factor from grid. This may take awhile...")
 	fac = FlowAccumulation(FlowDirection(refill))
 	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
 	facLand = Plus(Con(fac < facThreshold, fac), 1.0)
@@ -1087,7 +1089,7 @@ class downloadPrecipitationData(object):
 
 	def getParameterInfo(self):
 		param0 = arcpy.Parameter(
-		displayName= "Download frequency-duration data? If yes, define freqency and duration below.",
+		displayName= "Download frequency-duration data? If yes, define frequency and duration below.",
 		name="download_frequency_duration",
 		datatype="GPBoolean",
 		parameterType="Required",
@@ -1235,7 +1237,7 @@ class createCurveNumberRaster(object):
 		param5.filter.list = ["Polygon"]
 
 		param6 = arcpy.Parameter(
-			displayName="Raster template",
+			displayName="Conditioned DEM for raster template",
 			name="raster_template",
 			datatype="GPRasterLayer",
 			parameterType="Required",
@@ -1533,7 +1535,7 @@ class rasterizeKfactorForUsle(object):
 
 	def getParameterInfo(self):
 		param0 = arcpy.Parameter(
-			displayName="gSSURGO geodatabase",
+			displayName="gSSURGO database",
 			name="gssurgo_geodatabase",
 			datatype="DEWorkspace",
 			parameterType="Required",
