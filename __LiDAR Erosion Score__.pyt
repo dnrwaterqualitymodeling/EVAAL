@@ -70,7 +70,7 @@ def setupTemp(tempDir,tempGdb):
 		arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
 	else:
 		env.workspace = tempGdb
-		tempFiles = arcpy.ListDatasets() + arcpy.ListTables()
+		tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
 		arcpy.AddMessage(' ')
 		arcpy.AddMessage('#################')
 		arcpy.AddMessage('Cleaning scratch space...')
@@ -1102,6 +1102,7 @@ class downloadPrecipitationData(object):
 			datatype="GPString",
 			parameterType="Optional",
 			direction="Input")
+		param1.value = '10'
 		param1.filter.type = "ValueList"
 		param1.filter.list = [1, 2, 5, 10, 25, 50, 100, 200, 500, 1000]
 
@@ -1113,6 +1114,7 @@ class downloadPrecipitationData(object):
 			direction="Input")
 		param2.filter.type = "ValueList"
 		param2.filter.list = [2, 3, 6, 12, 24]
+		param2.value = '24'
 		
 		param3 = arcpy.Parameter(
 			displayName="Locally stored frequency-duration data (zip file)",
