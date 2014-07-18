@@ -1,3 +1,0 @@
-20140717 856   0     0     0evansdm C:\Evans_tutorial\tutorial_data\erosionVulnerabilityTools\scratch\Slope_condit1 = SLOPE(C:\Evans_tutorial\tutorial_data\output_products.gdb\conditioned_dem,  1.0, DEGREE)
-20140717 856   0     1     0evansdm C:\Evans_tutorial\tutorial_data\erosionVulnerabilityTools\scratch\FlowDir_reco1 = FLOWDIRECTION(C:\Evans_tutorial\tutorial_data\
-20140717 856   0     9     0evansdm C:\Evans_tutorial\tutorial_data\erosionVulnerabilityTools\scratch\FlowAcc_Flow1 = FLOWACCUMULATION(C:\Evans_tutorial\tutorial_da

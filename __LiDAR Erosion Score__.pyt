@@ -29,7 +29,7 @@ rotationSymbologyFile = sys.path[0] + '/etc/rotationSymbology.lyr'
 
 #if env.workspace is None and env.scratchWorkspace is None:
 tempGdb = tempDir + '/scratch.gdb'
-	
+
 startupinfo = subprocess.STARTUPINFO()
 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
@@ -63,53 +63,53 @@ def checkProjectionsOfInputs(parameters):
 							NAD_1983_HARN_Transverse_Mercator coordinate system.')
 
 def setupTemp(tempDir,tempGdb):
+	if os.path.exists(tempGdb):
+		try:
+			env.workspace = tempGdb
+			tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
+			arcpy.AddMessage(' ')
+			arcpy.AddMessage('#################')
+			arcpy.AddMessage('Cleaning scratch space...')
+			schemaMsg = '''Cannot clean temporary geodatabase. Are you viewing files in the database \
+				with a different application? Attempting to recreate scratch geodatabase \
+				(scratch.gdb). If this does not work, close ArcGIS and delete it manually.'''
+			for tempFile in tempFiles:
+				arcpy.AddMessage('Deleting ' + tempFile + '...')
+				arcpy.Delete_management(tempFile)
+			arcpy.Compact_management(tempGdb)
+		except:
+			arcpy.AddMessage(schemaMsg)
+			shutil.rmtree(tempGdb)
 	if not os.path.exists(tempGdb):
 		arcpy.AddMessage(' ')
 		arcpy.AddMessage('Creating scratch space...')
 		arcpy.AddMessage(' ')
 		arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
-	else:
-		env.workspace = tempGdb
-		tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
-		arcpy.AddMessage(' ')
-		arcpy.AddMessage('#################')
-		arcpy.AddMessage('Cleaning scratch space...')
-		schemaMsg = 'Cannot clean temporary geodatabase. Are you viewing files in the database \
-			with a different application? If yes, please close those applications and re-run the \
-			tool. If that does not work, delete the temporary geodatabase (/scripts/temp/temp.gdb) \
-			and re-run the tool'
-		for tempFile in tempFiles:
-			arcpy.AddMessage('Deleting ' + tempFile + '...')
-			try:
-				arcpy.Delete_management(tempFile)
-			except:
-				arcpy.AddMessage(schemaMsg)
-		arcpy.Compact_management(tempGdb)
-		os.chdir(tempDir)
-		fileList = os.listdir('.')
-		for f in fileList:
-			if os.path.isdir(f) and f != 'scratch.gdb':
-				arcpy.AddMessage('Deleting ' + f + '...')
-				shutil.rmtree(f)
-			elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
-				arcpy.AddMessage('Deleting ' + f + '...')
-				os.remove(f)
-		arcpy.AddMessage('#################')
-		arcpy.AddMessage(' ')
+	os.chdir(tempDir)
+	fileList = os.listdir('.')
+	for f in fileList:
+		if os.path.isdir(f) and f != 'scratch.gdb':
+			arcpy.AddMessage('Deleting ' + f + '...')
+			shutil.rmtree(f)
+		elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
+			arcpy.AddMessage('Deleting ' + f + '...')
+			os.remove(f)
+	arcpy.AddMessage('#################')
+	arcpy.AddMessage(' ')
 
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-	
+
 	if env.cellSize == 'MAXOF':
 		cellSize = 3
 	else:
 		cellSize = env.cellSize
 
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	rid = str(random.randint(111111, 999999))
-	
+
 	# Intermediate Files
 	watershedBuffer = tempGdb + '/watershedBuffer_' + rid
 	lidarClip = tempGdb + "/lidarClip_" + rid
@@ -166,20 +166,20 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-	
-	
-	
+
+
+
 	rid = str(random.randint(11111,99999))
 
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	# Intermediate data
 	prcpFile = tempGdb + '/prcp_' + rid
 	prcpPrjFile = tempGdb + '/prcpPrj_' + rid
 	prcpAscii = tempDir + '/prcpRaw_' + rid + '.asc'
-	
+
 	transformation = 'NAD_1983_To_HARN_Wisconsin'
-	
+
 	if downloadBool == 'true':
 		# URL for ascii grid of the 10-year 24-hour rainfall event
 		ftpDir = 'ftp://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
@@ -212,15 +212,15 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	f.close()
 	arcpy.AddMessage("Converting ASCII data to temporary raster...")
 	arcpy.ASCIIToRaster_conversion(prcpAscii, prcpFile, 'INTEGER')
-	
+
 	cs = arcpy.SpatialReference('NAD 1983')
 	arcpy.DefineProjection_management(prcpFile, cs)
-	
-	
-	
-	
+
+
+
+
 	env.cellSize = rasterTemplateFile
-	env.mask = rasterTemplateFile 
+	env.mask = rasterTemplateFile
 	env.extent = rasterTemplateFile
 	arcpy.AddMessage("Clipping to extent...")
 	prcpFileClp = prcpFile + '_clipped'
@@ -229,10 +229,10 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	clSz = str(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
 
 	#at 1045 2014-7-9
-	#changed a second 'rasterTemplateFile' to clSz 
+	#changed a second 'rasterTemplateFile' to clSz
 	#	thinking being that maybe it can't read the cell size from the raster
 	arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
-										
+
 	arcpy.ProjectRaster_management(prcpFileClp, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
 		, clSz, transformation)
 	arcpy.AddMessage('Finished projecting')
@@ -281,7 +281,7 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 	if ping == 1:
 		arcpy.AddError('The CropScape server is down. Please try again later, or download local \
 			Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
-	#unclipped 
+	#unclipped
 	cdlTiffs_fl = []
 	for year in years:
 		year = str(year)
@@ -302,20 +302,20 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 		except:
 			arcpy.AddError("The CropScape server failed. Please download the layers to your hard drive at http://www.nass.usda.gov/research/Cropland/Release/index.htm")
 		cdlTiffs_fl.append(downloadTiff)
-	
+
 	# For clipping to watershed extent
 	cdlTiffs = []
 	for i,fullCdl in enumerate(cdlTiffs_fl):
 			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'
-					#testing the ClippingGeometry option..  
+					#testing the ClippingGeometry option..
 			arcpy.Clip_management(fullCdl, '', clipCdl, watershedCdlPrj, '#', 'ClippingGeometry')
 			cdlTiffs.append(clipCdl)
-			
+
 	return cdlTiffs
 
 def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFile, \
 	demFile, outCnLow, outCnHigh, cnLookupFile, coverTypeLookupFile, tempDir,tempGdb):
-	
+
 	setupTemp(tempDir,tempGdb)
 
 	os.environ['ARCTMPDIR'] = tempDir
@@ -362,14 +362,14 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 			arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj)
 			cdlTiffs.append(clipCdl)
 			years.append(i)
-	
+
 	resolutions = []
 	for cdlTiff in cdlTiffs:
 		res = float(arcpy.GetRasterProperties_management(cdlTiff, 'CELLSIZEX').getOutput(0))
 		resolutions.append(res)
 	minResCdlTiff = np.array(cdlTiffs)[resolutions == np.min(resolutions)][0]
 	arcpy.RasterToPoint_conversion(minResCdlTiff, samplePts)
-	
+
 	cdlList = []
 	yrCols = []
 	for i,year in enumerate(years):
@@ -387,7 +387,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 		, "MUKEY", "hydgrpdcd")
 	arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
 		, 'KEEP_COMMON', '', 'INTERSECT')
-	
+
 	arcpy.AddMessage("Querying TR-55 based on land cover and hydrologic soil group...")
 	arcpy.AddField_management(joinSsurgo, 'cnLow', 'FLOAT')
 	arcpy.AddField_management(joinSsurgo, 'cnHigh', 'FLOAT')
@@ -408,7 +408,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 				lcs.append(str(row[y]))
 		cnsHigh = []
 		cnsLow = []
-		for lc in lcs:	
+		for lc in lcs:
 			for scen, hydCond in zip(['low', 'high'], ['Good', 'Poor']):
 				cn = queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup)
 				if scen == 'low' and cn is not None:
@@ -428,11 +428,11 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 		'', minResCdlTiff)
 	arcpy.PointToRaster_conversion(joinSsurgo, "cnHigh", outCnHigh1, 'MOST_FREQUENT', \
 		'', minResCdlTiff)
-		
+
 	env.snapRaster = demFile
 	env.cellSize = demFile
 	env.mask = demFile
-	
+
 	wtm = arcpy.Describe(demFile).spatialReference
 	outRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 	arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
@@ -442,7 +442,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContributingAreasFile, demFinalFile, tempDir, tempGdb):
 
 	rid = str(random.randint(10000,99999))
-	
+
 	setupTemp(tempDir,tempGdb)
 
 	# Intermediate Files
@@ -523,7 +523,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		#Convert only those nonContributing watersheds that are in the target to rasters
 			#grid_code for 10.1 and gridcode for 10.2
 	if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
-		colNm = 'gridcode' 
+		colNm = 'gridcode'
 	else:
 		colNm = 'grid_code'
 	arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
@@ -538,14 +538,14 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
-	
+
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.workspace = tempDir
 	env.scratchWorkspace = tempDir
-	
+
 	if grassWaterwaysFile is None or grassWaterwaysFile not in ['', '#']:
 		demRunoff = Raster(demFile)
 	else:
@@ -594,7 +594,7 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 	del fac, facLand
 	arcpy.AddMessage('Calculating stream power index...')
 	innerTerm = Con(BooleanAnd(IsNull(CA * Tan(G)),(Raster(demFile) > 0)),1,((CA * Tan(G)) + 1))
-		
+
 	spi = Ln(innerTerm)
 	spi.save(outFile)
 
@@ -691,14 +691,14 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 
 def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
 	outRotation, outHigh, outLow, legendFile, cFactorXwalkFile, tempDir, tempGdb):
-	
+
 	os.environ['ARCTMPDIR'] = tempDir
 
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
-	
+
 	rid = str(random.randint(10000,99999))
 	watershedCdlPrj = tempGdb + '/watershedCdlPrj_' + rid
 	samplePts = tempGdb + '/samplePts_' + rid
@@ -720,18 +720,18 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		cdlTiffs = []
 		years = []
 		for i,localCdl in enumerate(localCdlList):
-			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'  
+			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'
 			arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj, '#', 'ClippingGeometry')
 			cdlTiffs.append(clipCdl)
 			years.append(i)
-			
+
 	resolutions = []
 	for cdlTiff in cdlTiffs:
 		res = float(arcpy.GetRasterProperties_management(cdlTiff, 'CELLSIZEX').getOutput(0))
 		resolutions.append(res)
 
 	minResCdlTiff = np.array(cdlTiffs)[resolutions == np.min(resolutions)][0]
-	
+
 	arcpy.AddMessage("Converting Cropland Data Layer grid to points. If your watershed is larger than a HUC12, this may take awhile...")
 	arcpy.RasterToPoint_conversion(minResCdlTiff, samplePts)
 
@@ -765,7 +765,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	arcpy.AddField_management(samplePts, 'rotation', 'TEXT')
 	arcpy.AddField_management(samplePts, 'cFactorLow', 'FLOAT')
 	arcpy.AddField_management(samplePts, 'cFactorHigh', 'FLOAT')
-	
+
 	ptCount = int(arcpy.GetCount_management(samplePts).getOutput(0))
 	msg = "Generalizing rotation from crop sequence, and applying a C-factor..."
 	arcpy.SetProgressor("step", msg, 0, ptCount, 1)
@@ -787,7 +787,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		pSoyAndGrain = float(len(np.where(np.in1d(lcs,soyAndGrain))[0])) / nYr
 		pPotato = float(len(np.where(np.in1d(lcs,potatoes))[0])) / nYr
 		pVeggies = float(len(np.where(np.in1d(lcs,veggies))[0])) / nYr
-		
+
 		noDataBool = pNas == 1.
 		contCornBool = pCorn >= 3./5 and \
 			(pSoyAndGrain + pPotato + pVeggies + pAlfalfa + pPasture) == 0.
@@ -850,7 +850,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		arcpy.SetProgressorPosition()
 	arcpy.ResetProgressor()
 	del row, rows
-	
+
 	arcpy.AddMessage("Converting points to raster...")
 	arcpy.PointToRaster_conversion(samplePts, "rotation", outRotation1, 'MOST_FREQUENT', \
 		'', minResCdlTiff)
@@ -859,7 +859,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	arcpy.PointToRaster_conversion(samplePts, "cFactorLow", outLow1, 'MEAN', \
 		'', minResCdlTiff)
 
-	wtm = arcpy.Describe(rasterTemplateFile).spatialReference	
+	wtm = arcpy.Describe(rasterTemplateFile).spatialReference
 	outRes = int(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
 	env.mask = rasterTemplateFile
 	env.snapRaster = rasterTemplateFile
@@ -879,14 +879,14 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.mask = demFile
-	
+
 	origRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
-	
+
 	# Temp files
 	resampleDemFile = tempGdb +  "/resample"
 	resampleFillFile = tempGdb + "/resampleFill"
 	lsFile = tempGdb + "/ls"
-	
+
 	# Resample the dem to 10-meter resolution (use linear interpolation resample method)
 	arcpy.AddMessage("Resampling conditioned DEM...")
 	arcpy.Resample_management(demFile, resampleDemFile, "10", "BILINEAR")
@@ -895,7 +895,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	env.cellSize = resampleDemFile
 	arcpy.AddMessage("Re-filling re-conditioned DEM...")
 	refill = Fill(resampleFillFile)
-	
+
 	arcpy.AddMessage("Calculating LS-factor from grid. This may take awhile...")
 	fac = FlowAccumulation(FlowDirection(refill))
 	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
@@ -905,7 +905,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	del facLand
 	arcpy.AddMessage('Calculating br term of slope/slope-length equation...')
 	br = Slope(resampleDemFile, "DEGREE") * (math.pi / 180.0)
-	
+
 	a0 = 22.1
 	m = 0.6
 	n = 1.3
@@ -915,7 +915,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	del a0, m, n, b0
 	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
 	del LS10
-	
+
 	env.cellSize = demFile
 	arcpy.AddMessage("Calculating Soil Loss...")
 	if erosivityConstant is None and erosivityFile is None:
@@ -935,7 +935,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 
 def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, \
 	outSummaryTable, tempDir, tempGdb):
-	
+
 	randId = str(random.randint(1e5,1e6))
 	os.environ['ARCTMPDIR'] = tempDir
 
@@ -946,24 +946,24 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = demFile
-	
+
 	arcpy.AddMessage("Converting zones to raster...")
 	if zonalId is None:
-		zonalId = 'OBJECTID' 
+		zonalId = 'OBJECTID'
 	if zonalFile is not None:
-		
+
 		zonal = arcpy.PolygonToRaster_conversion(zonalFile, zonalId, tempGdb + '/zonalRaster'\
 			, 'CELL_CENTER', '', demFile)
-	
+
 		env.mask = tempGdb + '/zonalRaster'
-	
+
 	arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
 	lnUsle = Ln(Raster(usleFile) + 1)
 	spi = Raster(spiFile)
-	
+
 	arcpy.CalculateStatistics_management(spi)
 	arcpy.CalculateStatistics_management(lnUsle)
-	
+
 	spiMean = float(arcpy.GetRasterProperties_management(spi, "MEAN").getOutput(0))
 	spiSd = float(arcpy.GetRasterProperties_management(spi, "STD").getOutput(0))
 	usleMean = float(arcpy.GetRasterProperties_management(lnUsle, "MEAN").getOutput(0))
@@ -1077,7 +1077,7 @@ class conditionTheLidarDem(object):
 		lidarRaw = parameters[2].valueAsText
 		demCondFile = parameters[3].valueAsText
 		demOptimFillFile = parameters[4].valueAsText
-		
+
 		demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, tempDir, tempGdb)
 
 class downloadPrecipitationData(object):
@@ -1095,7 +1095,7 @@ class downloadPrecipitationData(object):
 		parameterType="Required",
 		direction="Input")
 		param0.value = 1
-		
+
 		param1 = arcpy.Parameter(
 			displayName="Frequency (years)",
 			name="frequency",
@@ -1115,7 +1115,7 @@ class downloadPrecipitationData(object):
 		param2.filter.type = "ValueList"
 		param2.filter.list = [2, 3, 6, 12, 24]
 		param2.value = '24'
-		
+
 		param3 = arcpy.Parameter(
 			displayName="Locally stored frequency-duration data (zip file)",
 			name="local_frequency_duration",
@@ -1174,7 +1174,7 @@ class downloadPrecipitationData(object):
 		localCopy = parameters[3].valueAsText
 		rasterTemplateFile = parameters[4].valueAsText
 		outPrcp = parameters[5].valueAsText
-		
+
 		preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, \
 			outPrcp, tempDir, tempGdb)
 
@@ -1221,7 +1221,7 @@ class createCurveNumberRaster(object):
 			parameterType="Optional",
 			direction="Input",
 			multiValue=True)
-			
+
 		param4 = arcpy.Parameter(
 			displayName="gSSURGO geodatabase",
 			name="gssurgo_geodatabase",
@@ -1337,7 +1337,7 @@ class internallyDrainingAreas(object):
 			datatype="GPRasterLayer",
 			parameterType="Required",
 			direction="Input")
-			
+
 		param4 = arcpy.Parameter(
 			displayName="Watershed area (buffered)",
 			name="watershed_area",
@@ -1390,7 +1390,7 @@ class internallyDrainingAreas(object):
 		watershedFile = parameters[4].valueAsText
 		nonContributingAreasFile = parameters[5].valueAsText
 		demFinalFile = parameters[6].valueAsText
-		
+
 		identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, watershedFile\
 			, nonContributingAreasFile, demFinalFile, tempDir, tempGdb)
 
@@ -1525,7 +1525,7 @@ class calculateStreamPowerIndex(object):
 		fillFile = parameters[1].valueAsText
 		facThreshold = int(parameters[2].valueAsText)
 		outFile = parameters[3].valueAsText
-		
+
 		streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 
 class rasterizeKfactorForUsle(object):
@@ -1937,6 +1937,6 @@ class erosionScore(object):
 		demFile = parameters[4].valueAsText
 		outErosionScoreFile = parameters[5].valueAsText
 		outSummaryTable = parameters[6].valueAsText
-		
+
 		calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, \
 			outSummaryTable, tempDir, tempGdb)
