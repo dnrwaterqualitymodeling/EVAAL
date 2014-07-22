@@ -1418,7 +1418,7 @@ class demReconditioning(object):
 			direction="Input")
 
 		param2 = arcpy.Parameter(
-			displayName='Additional "non-contributing" areas raster (BMPs such as grass waterways or riparian buffer areas)',
+			displayName='Best management practice areas (i.e., grass waterways, riparian buffer areas)',
 			name="additional_non_contributing_areas",
 			datatype="GPRasterLayer",
 			parameterType="Optional",
