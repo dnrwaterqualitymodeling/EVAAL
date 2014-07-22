@@ -545,8 +545,9 @@ def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFil
 
 	env.workspace = tempDir
 	env.scratchWorkspace = tempDir
-
-	if grassWaterwaysFile is None or grassWaterwaysFile not in ['', '#']:
+	env.extent = demFile
+													
+	if grassWaterwaysFile is None or grassWaterwaysFile in ['', '#']:
 		demRunoff = Raster(demFile)
 	else:
 		demRunoff = Con(IsNull(grassWaterwaysFile), demFile)
@@ -1083,7 +1084,7 @@ class conditionTheLidarDem(object):
 class downloadPrecipitationData(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "2a. Download Precipitation Data"
+		self.label = "2a. Download precipitation data"
 		self.description = ""
 		self.canRunInBackground = False
 
@@ -1181,7 +1182,7 @@ class downloadPrecipitationData(object):
 class createCurveNumberRaster(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "2b. Create Curve Number Raster"
+		self.label = "2b. Create curve number raster"
 		self.description = ""
 		self.canRunInBackground = False
 
@@ -1417,7 +1418,7 @@ class demReconditioning(object):
 			direction="Input")
 
 		param2 = arcpy.Parameter(
-			displayName='Additional "non-contributing" areas raster (e.g., grass waterways)',
+			displayName='Additional "non-contributing" areas raster (BMPs such as grass waterways or riparian buffer areas)',
 			name="additional_non_contributing_areas",
 			datatype="GPRasterLayer",
 			parameterType="Optional",
