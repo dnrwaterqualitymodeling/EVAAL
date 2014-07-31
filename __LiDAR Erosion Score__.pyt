@@ -1735,7 +1735,7 @@ class rasterizeCfactorForUsle(object):
 class calculateSoilLossUsingUsle(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "5c. Calculate soil loss using USLE"
+		self.label = "5c. Calculate soil loss index using USLE"
 		self.description = ""
 		self.canRunInBackground = False
 
@@ -1842,7 +1842,7 @@ class calculateSoilLossUsingUsle(object):
 class erosionScore(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "6. Calculate erosion score"
+		self.label = "6. Calculate erosion index"
 		self.description = ""
 		self.canRunInBackground = False
 
