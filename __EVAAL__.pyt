@@ -1842,7 +1842,7 @@ class calculateSoilLossUsingUsle(object):
 class erosionScore(object):
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
-		self.label = "6. Calculate erosion index"
+		self.label = "6. Calculate erosion vulnerability index"
 		self.description = ""
 		self.canRunInBackground = False
 
