@@ -1885,7 +1885,7 @@ class erosionScore(object):
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Output erosion score raster, select output folder",
+			displayName="Output erosion vulnerability index raster, select output folder",
 			name="erosion_score_raster",
 			datatype="Raster Layer",
 			parameterType="Optional",
