@@ -992,7 +992,7 @@ class Toolbox(object):
 	def __init__(self):
 		"""Define the toolbox (the name of the toolbox is the name of the
 		.pyt file)."""
-		self.label = "__LiDAR Erosion Score__"
+		self.label = "__EVAAL__"
 		self.alias = ""
 		# List of tool classes associated with this toolbox
 		self.tools = [conditionTheLidarDem,
