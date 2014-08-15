@@ -973,13 +973,13 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	arcpy.AddMessage("Calculating Z-scores...")
 	spiZ = (spi - spiMean) / spiSd
 	usleZ = (lnUsle - usleMean) / usleSd
-	arcpy.AddMessage("Calculating erosion score index...")
+	arcpy.AddMessage("Calculating erosion vulnerability index...")
 	erosionScore = spiZ + usleZ
 
 	if outErosionScoreFile is not None:
 		erosionScore.save(outErosionScoreFile)
 	if zonalFile is not None:
-		arcpy.AddMessage("Summarizing erosion score index within zonal statistics feature class boundaries...")
+		arcpy.AddMessage("Summarizing erosion vulnerability index within zonal statistics feature class boundaries...")
 		fields = arcpy.ListFields(tempGdb + '/zonalRaster')
 		if len(fields) == 3:
 			erosionScoreByClu = ZonalStatisticsAsTable(tempGdb + '/zonalRaster', 'Value', erosionScore\
@@ -1203,7 +1203,7 @@ class createCurveNumberRaster(object):
 			direction="Input")
 		param1.filter.type = "ValueList"
 		param1.filter.list = range(2008,2013)
-		param1.value = 2008
+		param1.value = 2009
 
 		param2 = arcpy.Parameter(
 			displayName="End year (2012 is recommended)",
@@ -1213,7 +1213,7 @@ class createCurveNumberRaster(object):
 			direction="Input")
 		param2.filter.type = "ValueList"
 		param2.filter.list = range(2009,2014)
-		param2.value = 2012
+		param2.value = 2013
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",
@@ -1630,7 +1630,7 @@ class rasterizeCfactorForUsle(object):
 			direction="Input")
 		param1.filter.type = "ValueList"
 		param1.filter.list = range(2008,2013)
-		param1.value = 2008
+		param1.value = 2009
 
 		param2 = arcpy.Parameter(
 			displayName="End year (2012 is recommended)",
@@ -1640,7 +1640,7 @@ class rasterizeCfactorForUsle(object):
 			direction="Input")
 		param2.filter.type = "ValueList"
 		param2.filter.list = range(2009,2014)
-		param2.value = 2012
+		param2.value = 2013
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",
