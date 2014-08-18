@@ -86,55 +86,21 @@ def setupTemp(tempDir, tempGdb):
 			os.remove(f)
 	arcpy.AddMessage('#################')
 	arcpy.AddMessage(' ')
-	# except:
-		# arcpy.AddError(arcpy.GetMessages(2))
-		# arcpy.AddMessage("Scratch directories not cleaned. Check if files are being used in another process")
-
-# def setupTemp(tempDir,tempGdb):
-	# schemaMsg = '''Cannot clean temporary geodatabase. Are you viewing files in the database \
-					# with a different application? Attempting to recreate scratch geodatabase \
-					# (scratch.gdb). If this does not work, close ArcGIS and delete it manually.'''
-	# if os.path.exists(tempGdb):
-		# try:
-			# tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
-			# arcpy.AddMessage(' ')
-			# arcpy.AddMessage('#################')
-			# arcpy.AddMessage('Cleaning scratch space...')
-			# for tempFile in tempFiles:
-				# arcpy.AddMessage('Deleting ' + tempFile + '...')
-				# arcpy.Delete_management(tempFile)
-			# arcpy.Compact_management(tempGdb)
-		# except:
-			# arcpy.AddMessage(arcpy.GetMessages())
-			# arcpy.AddMessage(schemaMsg)
-			# shutil.rmtree(tempGdb)
-	# if not os.path.exists(tempGdb):
-		# arcpy.AddMessage(' ')
-		# arcpy.AddMessage('Creating scratch space...')
-		# arcpy.AddMessage(' ')
-		# arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
-	# os.chdir(tempDir)
-	# fileList = os.listdir('.')
-	# for f in fileList:
-		# if os.path.isdir(f) and f != 'scratch.gdb':
-			# arcpy.AddMessage('Deleting ' + f + '...')
-			# shutil.rmtree(f)
-		# elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
-			# arcpy.AddMessage('Deleting ' + f + '...')
-			# os.remove(f)
-	# arcpy.AddMessage('#################')
-	# arcpy.AddMessage(' ')
+	
 
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-
+	
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
 	if env.cellSize == 'MAXOF':
 		cellSize = 3
 	else:
 		cellSize = env.cellSize
 
-	os.environ['ARCTMPDIR'] = tempDir
+	
 
 	rid = str(random.randint(111111, 999999))
 
@@ -194,10 +160,13 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-
+	
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
 	rid = str(random.randint(11111,99999))
 
-	os.environ['ARCTMPDIR'] = tempDir
+	
 
 	# Intermediate data
 	prcpFile = tempGdb + '/prcp_' + rid
@@ -343,7 +312,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	demFile, outCnLow, outCnHigh, cnLookupFile, coverTypeLookupFile, tempDir,tempGdb):
 
 	setupTemp(tempDir,tempGdb)
-
+	
+	env.scratchWorkspace = wd + '/temp'
 	os.environ['ARCTMPDIR'] = tempDir
 
 	rid = str(random.randint(10000,99999))
@@ -471,6 +441,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 
 	setupTemp(tempDir,tempGdb)
 
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
 	# Intermediate Files
 	clipCn = tempGdb + '/clipCn_' + rid
 	runoffTable = tempDir + '/runoffTable_' + rid + '.dbf'
@@ -565,12 +538,11 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
 
-	os.environ['ARCTMPDIR'] = tempDir
-
 	setupTemp(tempDir,tempGdb)
 
-	env.workspace = tempDir
-	env.scratchWorkspace = tempDir
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
 	env.extent = demFile
 													
 	if grassWaterwaysFile is None or grassWaterwaysFile in ['', '#']:
@@ -598,12 +570,12 @@ def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFil
 
 def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb):
 
-	os.environ['ARCTMPDIR'] = tempDir
-
 	setupTemp(tempDir,tempGdb)
-
-	env.scratchWorkspace = tempDir
-	env.workspace = tempDir
+	
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
+	
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = demFile
@@ -674,12 +646,11 @@ def makeTableFromAggregatedData(dataDict, tableFile):
 
 def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, tempDir, tempGdb):
 	randId = str(random.randint(1e5,1e6))
-	os.environ['ARCTMPDIR'] = tempDir
-
+	
 	setupTemp(tempDir,tempGdb)
 
-	env.scratchWorkspace = tempDir
-	env.workspace = tempDir
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
 
 	arcpy.AddMessage('Creating gSSURGO table views...')
 	compTable = gssurgoGdb + '/component'
@@ -719,12 +690,10 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
 	outRotation, outHigh, outLow, legendFile, cFactorXwalkFile, tempDir, tempGdb):
 
-	os.environ['ARCTMPDIR'] = tempDir
-
 	setupTemp(tempDir,tempGdb)
 
-	env.scratchWorkspace = tempDir
-	env.workspace = tempDir
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
 
 	rid = str(random.randint(10000,99999))
 	watershedCdlPrj = tempGdb + '/watershedCdlPrj_' + rid
@@ -899,10 +868,10 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	facThreshold, outFile, tempDir, tempGdb):
 
 	setupTemp(tempDir,tempGdb)
+	
+	env.scratchWorkspace = wd + '/temp'
 	os.environ['ARCTMPDIR'] = tempDir
-
-	env.scratchWorkspace = tempDir
-	env.workspace = tempDir
+	
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.mask = demFile
@@ -964,12 +933,14 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	outSummaryTable, tempDir, tempGdb):
 
 	randId = str(random.randint(1e5,1e6))
-	os.environ['ARCTMPDIR'] = tempDir
 
 	setupTemp(tempDir,tempGdb)
-
-	env.scratchWorkspace = tempDir
-	env.workspace = tempDir
+	
+	env.scratchWorkspace = wd + '/temp'
+	os.environ['ARCTMPDIR'] = tempDir
+	
+	# env.scratchWorkspace = tempDir
+	# env.workspace = tempDir
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = demFile
