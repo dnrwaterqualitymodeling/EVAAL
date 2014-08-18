@@ -19,16 +19,18 @@ arcpy.CheckOutExtension("Spatial")
 env.overwriteOutput = True
 arcpy.env.pyramid = 'NONE'
 arcpy.env.rasterStatistics = 'NONE'
-tempDir = sys.path[0] + '/scratch'
-optFillExe = sys.path[0] + '/etc/OptimizedPitRemoval.exe'
-cnLookupFile = sys.path[0] + '/etc/curveNumberLookup.csv'
-legendFile = sys.path[0] + '/etc/cdlLegend.csv'
-cFactorXwalkFile = sys.path[0] + '/etc/cFactorLookup.csv'
-coverTypeLookupFile = sys.path[0] + '/etc/coverTypeLookup.json'
-rotationSymbologyFile = sys.path[0] + '/etc/rotationSymbology.lyr'
+wd = sys.path[0]
+optFillExe = wd + '/etc/OptimizedPitRemoval.exe'
+cnLookupFile = wd + '/etc/curveNumberLookup.csv'
+legendFile = wd + '/etc/cdlLegend.csv'
+cFactorXwalkFile = wd + '/etc/cFactorLookup.csv'
+coverTypeLookupFile = wd + '/etc/coverTypeLookup.json'
+rotationSymbologyFile = wd + '/etc/rotationSymbology.lyr'
 
-#if env.workspace is None and env.scratchWorkspace is None:
-tempGdb = tempDir + '/scratch.gdb'
+env.scratchWorkspace = wd + '/temp'
+
+tempDir = env.scratchFolder
+tempGdb = env.scratchGDB
 
 startupinfo = subprocess.STARTUPINFO()
 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -62,40 +64,66 @@ def checkProjectionsOfInputs(parameters):
 						p.setErrorMessage('Dataset must be projected in \
 							NAD_1983_HARN_Transverse_Mercator coordinate system.')
 
-def setupTemp(tempDir,tempGdb):
-	if os.path.exists(tempGdb):
-		try:
-			env.workspace = tempGdb
-			tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
-			arcpy.AddMessage(' ')
-			arcpy.AddMessage('#################')
-			arcpy.AddMessage('Cleaning scratch space...')
-			schemaMsg = '''Cannot clean temporary geodatabase. Are you viewing files in the database \
-				with a different application? Attempting to recreate scratch geodatabase \
-				(scratch.gdb). If this does not work, close ArcGIS and delete it manually.'''
-			for tempFile in tempFiles:
-				arcpy.AddMessage('Deleting ' + tempFile + '...')
-				arcpy.Delete_management(tempFile)
-			arcpy.Compact_management(tempGdb)
-		except:
-			arcpy.AddMessage(schemaMsg)
-			shutil.rmtree(tempGdb)
-	if not os.path.exists(tempGdb):
-		arcpy.AddMessage(' ')
-		arcpy.AddMessage('Creating scratch space...')
-		arcpy.AddMessage(' ')
-		arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
+def setupTemp(tempDir, tempGdb):
+	env.workspace = tempGdb
+	arcpy.AddMessage(' ')
+	arcpy.AddMessage('#################')
+	arcpy.AddMessage('Cleaning scratch space...')
+	arcpy.Compact_management(tempGdb)
+	tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
+	for tempFile in tempFiles:
+		arcpy.AddMessage('Deleting ' + tempFile + '...')
+		arcpy.Delete_management(tempFile)
+		arcpy.Compact_management(tempGdb)	
 	os.chdir(tempDir)
 	fileList = os.listdir('.')
 	for f in fileList:
-		if os.path.isdir(f) and f != 'scratch.gdb':
+		if os.path.isdir(f):
 			arcpy.AddMessage('Deleting ' + f + '...')
 			shutil.rmtree(f)
-		elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
+		else:
 			arcpy.AddMessage('Deleting ' + f + '...')
 			os.remove(f)
 	arcpy.AddMessage('#################')
 	arcpy.AddMessage(' ')
+	# except:
+		# arcpy.AddError(arcpy.GetMessages(2))
+		# arcpy.AddMessage("Scratch directories not cleaned. Check if files are being used in another process")
+
+# def setupTemp(tempDir,tempGdb):
+	# schemaMsg = '''Cannot clean temporary geodatabase. Are you viewing files in the database \
+					# with a different application? Attempting to recreate scratch geodatabase \
+					# (scratch.gdb). If this does not work, close ArcGIS and delete it manually.'''
+	# if os.path.exists(tempGdb):
+		# try:
+			# tempFiles = arcpy.ListDatasets() + arcpy.ListTables() + arcpy.ListFeatureClasses()
+			# arcpy.AddMessage(' ')
+			# arcpy.AddMessage('#################')
+			# arcpy.AddMessage('Cleaning scratch space...')
+			# for tempFile in tempFiles:
+				# arcpy.AddMessage('Deleting ' + tempFile + '...')
+				# arcpy.Delete_management(tempFile)
+			# arcpy.Compact_management(tempGdb)
+		# except:
+			# arcpy.AddMessage(arcpy.GetMessages())
+			# arcpy.AddMessage(schemaMsg)
+			# shutil.rmtree(tempGdb)
+	# if not os.path.exists(tempGdb):
+		# arcpy.AddMessage(' ')
+		# arcpy.AddMessage('Creating scratch space...')
+		# arcpy.AddMessage(' ')
+		# arcpy.CreateFileGDB_management(tempDir, 'scratch.gdb', 'CURRENT')
+	# os.chdir(tempDir)
+	# fileList = os.listdir('.')
+	# for f in fileList:
+		# if os.path.isdir(f) and f != 'scratch.gdb':
+			# arcpy.AddMessage('Deleting ' + f + '...')
+			# shutil.rmtree(f)
+		# elif f != 'scratch.gdb'and f != 'README.txt' and f != '.gitignore':
+			# arcpy.AddMessage('Deleting ' + f + '...')
+			# os.remove(f)
+	# arcpy.AddMessage('#################')
+	# arcpy.AddMessage(' ')
 
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
@@ -166,8 +194,6 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-
-
 
 	rid = str(random.randint(11111,99999))
 
