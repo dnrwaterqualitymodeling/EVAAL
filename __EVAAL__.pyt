@@ -101,8 +101,6 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 	else:
 		cellSize = env.cellSize
 
-	
-
 	rid = str(random.randint(111111, 999999))
 
 	# Intermediate Files
@@ -213,10 +211,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	cs = arcpy.SpatialReference('NAD 1983')
 	arcpy.DefineProjection_management(prcpFile, cs)
 
-
-
-
-	env.cellSize = rasterTemplateFile
+	env.cellSize = arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0)
 	env.mask = rasterTemplateFile
 	env.extent = rasterTemplateFile
 	arcpy.AddMessage("Clipping to extent...")
@@ -429,7 +424,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 		'', minResCdlTiff)
 
 	env.snapRaster = demFile
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 	env.mask = demFile
 
 	wtm = arcpy.Describe(demFile).spatialReference
@@ -462,7 +457,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	os.environ['ARCTMPDIR'] = tempDir
 	env.snapRaster = demFile
 	env.extent = demFile
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 	env.mask = demFile
 
 	arcpy.AddMessage("Identifying sinks...")
@@ -593,7 +588,7 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 	
 	env.snapRaster = demFile
 	env.extent = demFile
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 	env.mask = demFile
 
 	arcpy.AddMessage('Calculating slope...')
@@ -691,7 +686,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 	arcpy.AddMessage("Projecting gSSURGO...")
 	env.snapRaster = demFile
 	env.extent = demFile
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 	arcpy.Clip_analysis(gssurgoGdb + '/MUPOLYGON', watershedFile\
 		, tempGdb + '/MUPOLYGON_clip_' + randId)
 	arcpy.Project_management(tempGdb + '/MUPOLYGON_clip_' + randId\
@@ -905,7 +900,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	arcpy.Resample_management(demFile, resampleDemFile, "10", "BILINEAR")
 	arcpy.AddMessage("Resampling re-conditioned DEM...")
 	arcpy.Resample_management(fillFile, resampleFillFile, "10", "BILINEAR")
-	env.cellSize = resampleDemFile
+	env.cellSize = arcpy.GetRasterProperties_management(resampleDemFile, 'CELLSIZEX').getOutput(0)
 	arcpy.AddMessage("Re-filling re-conditioned DEM...")
 	refill = Fill(resampleFillFile)
 
@@ -929,7 +924,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
 	del LS10
 
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 	arcpy.AddMessage("Calculating Soil Loss...")
 	if erosivityConstant is None and erosivityFile is None:
 		R = 1
@@ -959,7 +954,7 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	
 	env.snapRaster = demFile
 	env.extent = demFile
-	env.cellSize = demFile
+	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
 
 	arcpy.AddMessage("Converting zones to raster...")
 	if zonalId is None:
