@@ -500,40 +500,50 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		# create new table, IF the total storage volume is greater than the max runoff
 	arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
-	trueSinks = []
-	rows = arcpy.da.SearchCursor(trueSinkTable, ['Value'])
-	for row in rows:
-		trueSinks.append(row[0])
-	del row, rows
+	trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
+	if trueSinkCount > 0:
+		trueSinks = []
+		rows = arcpy.da.SearchCursor(trueSinkTable, ['Value'])
+		for row in rows:
+			trueSinks.append(row[0])
+		del row, rows
 
-	arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-	seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
-	nonContributingAreas = Watershed(fdr, seeds)
-	del seeds, fdr
+		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
+		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
+		nonContributingAreas = Watershed(fdr, seeds)
+		del seeds, fdr
 
-	arcpy.AddMessage("Saving output...")
-	arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
-	arcpy.MakeFeatureLayer_management(nonContribRaw, 'nonContribRaw_layer')
-	arcpy.MakeFeatureLayer_management(watershedFile, 'watershed_layer')
-		# To select those nonContributing watersheds that are within the target watershed
-	arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
-		, '', 'NEW_SELECTION')
-	arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
-		#Convert only those nonContributing watersheds that are in the target to rasters
-			#grid_code for 10.1 and gridcode for 10.2
-	if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
-		colNm = 'gridcode'
+		arcpy.AddMessage("Saving output...")
+		arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
+		arcpy.MakeFeatureLayer_management(nonContribRaw, 'nonContribRaw_layer')
+		arcpy.MakeFeatureLayer_management(watershedFile, 'watershed_layer')
+			# To select those nonContributing watersheds that are within the target watershed
+		arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
+			, '', 'NEW_SELECTION')
+		arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
+			#Convert only those nonContributing watersheds that are in the target to rasters
+				#grid_code for 10.1 and gridcode for 10.2
+		if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
+			colNm = 'gridcode'
+		else:
+			colNm = 'grid_code'
+		arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
+			, nonContribUngrouped, 'CELL_CENTER', '', demFile)
+		noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
+
+		grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
+		grouped.save(nonContributingAreasFile)
+
+		demFinal = Con(IsNull(nonContributingAreasFile), demFile)
+		demFinal.save(demFinalFile)
 	else:
-		colNm = 'grid_code'
-	arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
-		, nonContribUngrouped, 'CELL_CENTER', '', demFile)
-	noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
-
-	grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
-	grouped.save(nonContributingAreasFile)
-
-	demFinal = Con(IsNull(nonContributingAreasFile), demFile)
-	demFinal.save(demFinalFile)
+		arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
+		
+		nullRaster = Reclassify(fdr, 'Value', RemapRange([[0,128,"NODATA"]]), 'NODATA')
+		nullRaster.save(nonContributingAreasFile)
+		
+		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
+		
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
@@ -939,8 +949,6 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	env.scratchWorkspace = wd + '/temp'
 	os.environ['ARCTMPDIR'] = tempDir
 	
-	# env.scratchWorkspace = tempDir
-	# env.workspace = tempDir
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = demFile
