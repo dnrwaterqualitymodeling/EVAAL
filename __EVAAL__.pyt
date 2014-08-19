@@ -93,6 +93,7 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 	setupTemp(tempDir,tempGdb)
 	
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	if env.cellSize == 'MAXOF':
@@ -162,6 +163,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	setupTemp(tempDir,tempGdb)
 	
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	rid = str(random.randint(11111,99999))
@@ -314,6 +316,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	setupTemp(tempDir,tempGdb)
 	
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 
 	rid = str(random.randint(10000,99999))
@@ -442,6 +445,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	# Intermediate Files
@@ -543,7 +547,6 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		nullRaster.save(nonContributingAreasFile)
 		
 		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
-		
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
@@ -551,6 +554,7 @@ def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFil
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	env.extent = demFile
@@ -583,6 +587,7 @@ def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb)
 	setupTemp(tempDir,tempGdb)
 	
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	
@@ -660,6 +665,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 
 	arcpy.AddMessage('Creating gSSURGO table views...')
@@ -703,6 +709,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 
 	rid = str(random.randint(10000,99999))
@@ -947,6 +954,7 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	setupTemp(tempDir,tempGdb)
 	
 	env.scratchWorkspace = wd + '/temp'
+	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	env.snapRaster = demFile
