@@ -87,7 +87,6 @@ def setupTemp(tempDir, tempGdb):
 	arcpy.AddMessage('#################')
 	arcpy.AddMessage(' ')
 	
-
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
@@ -476,31 +475,42 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
+	
+	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
+	arcpy.AddMessage('All no data returned: ' + str(allnoDat))
+	if allnoDat == 1:
+		arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
+		
+		# Null raster being saved
+		sinkLarge.save(nonContributingAreasFile)
+		
+		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
+	else:      
+		arcpy.AddMessage("Calculating runoff...")
+		CN = Raster(cnFile)
+		prcpInches = Raster(prcpFile) / 1000.
+		S = (1000.0 / CN) - 10.0
+		Ia = 0.2 * S
+		runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
+		runoffVolume = (runoffDepth * 0.0254) * A
+		fdr = FlowDirection(optimFillFile)
+		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
+		del CN, S, Ia, runoffDepth
 
-	arcpy.AddMessage("Calculating runoff...")
-	CN = Raster(cnFile)
-	prcpInches = Raster(prcpFile) / 1000.
-	S = (1000.0 / CN) - 10.0
-	Ia = 0.2 * S
-	runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
-	runoffVolume = (runoffDepth * 0.0254) * A
-	fdr = FlowDirection(optimFillFile)
-	runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
-	del CN, S, Ia, runoffDepth
+		arcpy.AddMessage("Comparing runoff to sink capacity...")
+		arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
+			#Grab the maximum amount of runoff for each sink
+		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
+			#Grab the total of the storage volume for each sink
+		ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
 
-	arcpy.AddMessage("Comparing runoff to sink capacity...")
-	arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
-		#Grab the maximum amount of runoff for each sink
-	ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
-		#Grab the total of the storage volume for each sink
-	ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
+		arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
+			# create new table, IF the total storage volume is greater than the max runoff
+		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
-	arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
-		# create new table, IF the total storage volume is greater than the max runoff
-	arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
-
-	trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
-	if trueSinkCount > 0:
+		trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
+	
+		#if trueSinkCount > 0:
 		trueSinks = []
 		rows = arcpy.da.SearchCursor(trueSinkTable, ['Value'])
 		for row in rows:
@@ -535,13 +545,6 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 
 		demFinal = Con(IsNull(nonContributingAreasFile), demFile)
 		demFinal.save(demFinalFile)
-	else:
-		arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
-		
-		nullRaster = Reclassify(fdr, 'Value', RemapRange([[0,128,"NODATA"]]), 'NODATA')
-		nullRaster.save(nonContributingAreasFile)
-		
-		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
@@ -968,7 +971,7 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 
 	arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
 	lnUsle = Ln(Raster(usleFile) + 1)
-	spi = Raster(spiFile)
+	spi = Raster(spiFile)*1
 
 	arcpy.CalculateStatistics_management(spi)
 	arcpy.CalculateStatistics_management(lnUsle)
