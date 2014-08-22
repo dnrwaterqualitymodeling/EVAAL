@@ -38,9 +38,9 @@ startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 def checkForSpaces(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer', 'Table']:
+			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer','Table']:
 				# Value of paramater can only be string type. Doesn't work for multivalue
-				if type(p.value) == str:
+				if not p.multiValue:
 					path = arcpy.Describe(p.value).catalogPath
 					if ' ' in path:
 						p.setErrorMessage("Spaces are not allowed in dataset path.")
@@ -48,7 +48,7 @@ def checkForSpaces(parameters):
 def replaceSpacesWithUnderscores(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Output' and p.datatype in ['Feature Layer','Raster Layer', 'Table']:
+			if p.direction == 'Output' and p.datatype in ['Feature Layer','Raster Layer','Table']:
 				if ' ' in p.value.value:
 					p.value = p.value.value.replace(' ', '_')
 					p.setWarningMessage('Spaces in file path were replaced with underscores.')
@@ -58,7 +58,7 @@ def checkProjectionsOfInputs(parameters):
 		if p.value:
 			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer']:
 				# Value of paramater can only be string type. Doesn't work for multivalue
-				if type(p.value) == str:
+				if not p.multiValue:
 					cs = arcpy.Describe(p.value).spatialReference.name
 					if cs != 'NAD_1983_HARN_Transverse_Mercator':
 						p.setErrorMessage('Dataset must be projected in \
@@ -971,6 +971,9 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 
 	arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
 	lnUsle = Ln(Raster(usleFile) + 1)
+		# x 1 was added by T. Nelson on 2014-08-20
+		#	Arc was not able to calculate stats on (line 978)
+		#	this '*1' seems to work...for some reason
 	spi = Raster(spiFile)*1
 
 	arcpy.CalculateStatistics_management(spi)
