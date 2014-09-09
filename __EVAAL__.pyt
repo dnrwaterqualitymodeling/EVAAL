@@ -766,7 +766,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 
 	# Read in C-factor crosswalk table and CDL legend file
 	cFactorXwalk = np.loadtxt(cFactorXwalkFile \
-		, dtype=[('LAND_COVER', 'S40'), ('COVER_LEVEL', 'S10'), ('C_FACTOR', 'f4')] \
+		, dtype=[('LAND_COVER', 'S40'), ('SCENARIO', 'S10'), ('C_FACTOR', 'f4')] \
 		, delimiter=',', skiprows=1)
 
 	cdlLegend = np.loadtxt(legendFile \
@@ -848,8 +848,8 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 				c_low = float(c_ave)
 		if rot != "No agriculture":
 			rotBool = cFactorXwalk['LAND_COVER'] == rot
-			highBool = np.in1d(cFactorXwalk['COVER_LEVEL'], np.array(['High', '']))
-			lowBool = np.in1d(cFactorXwalk['COVER_LEVEL'], np.array(['Low', '']))
+			highBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['High', '']))
+			lowBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['Low', '']))
 			c_high = np.extract(np.logical_and(rotBool, highBool), cFactorXwalk['C_FACTOR'])
 			c_low = np.extract(np.logical_and(rotBool, lowBool), cFactorXwalk['C_FACTOR'])
 			c_high = float(c_high)
