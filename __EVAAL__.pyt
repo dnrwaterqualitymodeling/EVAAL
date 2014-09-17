@@ -280,9 +280,9 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 			+ r'year='\
 			+ year + r'&'\
 			+ r'bbox='\
-			+ str(ext.XMin) + '%2C'\
-			+ str(ext.YMin) + '%2C'\
-			+ str(ext.XMax) + '%2C'\
+			+ str(ext.XMin) + ','\
+			+ str(ext.YMin) + ','\
+			+ str(ext.XMax) + ','\
 			+ str(ext.YMax)
 		try:
 			downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
