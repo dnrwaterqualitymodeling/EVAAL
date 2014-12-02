@@ -60,7 +60,7 @@ def checkProjectionsOfInputs(parameters):
 				# Value of paramater can only be string type. Doesn't work for multivalue
 				if not p.multiValue:
 					cs = arcpy.Describe(p.value).spatialReference.name
-					if cs != 'NAD_1983_HARN_Transverse_Mercator':
+					if cs not in ['NAD_1983_HARN_Transverse_Mercator', 'NAD_1983_HARN_Wisconsin_TM']:
 						p.setErrorMessage('Dataset must be projected in \
 							NAD_1983_HARN_Transverse_Mercator coordinate system.')
 
