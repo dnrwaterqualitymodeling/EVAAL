@@ -64,8 +64,20 @@ def checkProjectionsOfInputs(parameters):
 						p.setErrorMessage('Dataset must be projected in \
 							NAD_1983_HARN_Transverse_Mercator coordinate system.')
 
+def checkDupOutput(parameters):
+	output_names = []
+	for p in parameters:
+		if p.value:
+			if p.direction == 'Output':
+				output_names.append(p.value.value)
+	if len(output_names) != len(set(output_names)):
+		p.setErrorMessage('Duplicate output names are not allowed')
+
 def setupTemp(tempDir, tempGdb):
 	env.workspace = tempGdb
+	env.scratchWorkspace = os.path.dirname(tempDir)
+	tempDir = env.scratchFolder
+	tempGdb = env.scratchGDB
 	arcpy.AddMessage(' ')
 	arcpy.AddMessage('#################')
 	arcpy.AddMessage('Cleaning scratch space...')
@@ -164,8 +176,6 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	os.environ['ARCTMPDIR'] = tempDir
 	
 	rid = str(random.randint(11111,99999))
-
-	
 
 	# Intermediate data
 	prcpFile = tempGdb + '/prcp_' + rid
@@ -342,7 +352,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	del f
 	arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
 	sr = arcpy.SpatialReference(102039)
-	arcpy.Project_management(watershedFile, watershedCdlPrj, sr)
+	arcpy.Project_management(watershedFile, watershedCdlPrj, sr, "NAD_1983_To_HARN_Wisconsin")
 	if downloadBool == 'true':
 		arcpy.AddMessage("Downloading Cropland Data Layers...")
 		cdlTiffs = downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid)
@@ -536,8 +546,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 			colNm = 'gridcode'
 		else:
 			colNm = 'grid_code'
+		cs = arcpy.Describe(demFile).children[0].meanCellHeight
 		arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
-			, nonContribUngrouped, 'CELL_CENTER', '', demFile)
+			, nonContribUngrouped, 'CELL_CENTER', '', cs)
 		noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
 
 		grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
@@ -1052,14 +1063,14 @@ class conditionTheLidarDem(object):
 			direction="Input")
 
 		param3 = arcpy.Parameter(
-			displayName="Output conditioned DEM, select output folder",
+			displayName="Output conditioned DEM",
 			name="output_conditioned_dem",
 			datatype="Raster Layer",
 			parameterType="Required",
 			direction="Output")
 
 		param4 = arcpy.Parameter(
-			displayName="Output optimized fill, select output folder",
+			displayName="Output optimized fill",
 			name="output_optimized_fill",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1084,6 +1095,7 @@ class conditionTheLidarDem(object):
 		parameter.  This method is called after internal validation."""
 		checkForSpaces(parameters)
 		checkProjectionsOfInputs(parameters)
+		checkDupOutput(parameters)
 		return
 
 	def execute(self, parameters, messages):
@@ -1147,7 +1159,7 @@ class downloadPrecipitationData(object):
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Output precipitation frequency-duration raster, select output folder",
+			displayName="Output precipitation frequency-duration raster",
 			name="output_precipitation_raster",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1210,7 +1222,7 @@ class createCurveNumberRaster(object):
 		param0.value = 1
 
 		param1 = arcpy.Parameter(
-			displayName="Start year (2008 is recommended)",
+			displayName="Start year. Five total years is recommended",
 			name="start_year",
 			datatype="String",
 			parameterType="Optional",
@@ -1220,7 +1232,7 @@ class createCurveNumberRaster(object):
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
-			displayName="End year (2012 is recommended)",
+			displayName="End year",
 			name="end_year",
 			datatype="String",
 			parameterType="Optional",
@@ -1261,14 +1273,14 @@ class createCurveNumberRaster(object):
 			direction="Input")
 
 		param7 = arcpy.Parameter(
-			displayName="Output curve number raster (high estimate), select output folder",
+			displayName="Output curve number raster (high estimate)",
 			name="output_curve_number_high",
 			datatype="Raster Layer",
 			parameterType="Required",
 			direction="Output")
 
 		param8 = arcpy.Parameter(
-			displayName="Output curve number raster (low estimate), select output folder",
+			displayName="Output curve number raster (low estimate)",
 			name="output_curve_number_low",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1301,6 +1313,7 @@ class createCurveNumberRaster(object):
 		parameter.  This method is called after internal validation."""
 		checkForSpaces(parameters)
 		checkProjectionsOfInputs(parameters)
+		checkDupOutput(parameters)
 		return
 
 	def execute(self, parameters, messages):
@@ -1362,14 +1375,14 @@ class internallyDrainingAreas(object):
 		param4.filter.list = ["Polygon"]
 
 		param5 = arcpy.Parameter(
-			displayName="Output internally draining areas, select output folder",
+			displayName="Output internally draining areas",
 			name="internally_draining_areas",
 			datatype="Raster Layer",
 			parameterType="Required",
 			direction="Output")
 
 		param6 = arcpy.Parameter(
-			displayName="Output DEM excluding internally draining areas, select output folder",
+			displayName="Output DEM excluding internally draining areas",
 			name="dem_excluding_internally_draining_areas",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1394,6 +1407,7 @@ class internallyDrainingAreas(object):
 		parameter.  This method is called after internal validation."""
 		checkForSpaces(parameters)
 		checkProjectionsOfInputs(parameters)
+		checkDupOutput(parameters)
 		return
 
 	def execute(self, parameters, messages):
@@ -1439,7 +1453,7 @@ class demReconditioning(object):
 			direction="Input")
 
 		param3 = arcpy.Parameter(
-			displayName="Output Reconditioned DEM excluding internally draining areas, select output folder",
+			displayName="Output Reconditioned DEM excluding internally draining areas",
 			name="reconditioned_dem",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1507,7 +1521,7 @@ class calculateStreamPowerIndex(object):
 		param2.value = '50000'
 
 		param3 = arcpy.Parameter(
-			displayName="Output stream power index raster, select output folder",
+			displayName="Output stream power index raster",
 			name="stream_power_index_raster",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1583,7 +1597,7 @@ class rasterizeKfactorForUsle(object):
 		param3.filter.list = ["Polygon"]
 
 		param4 = arcpy.Parameter(
-			displayName="Output K-factor raster, select output folder",
+			displayName="Output K-factor raster",
 			name="k_factor_raster",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1637,7 +1651,7 @@ class rasterizeCfactorForUsle(object):
 		param0.value = 1
 
 		param1 = arcpy.Parameter(
-			displayName="Start year (2008 is recommended)",
+			displayName="Start year. Five total years is recommended",
 			name="start_year",
 			datatype="String",
 			parameterType="Optional",
@@ -1647,7 +1661,7 @@ class rasterizeCfactorForUsle(object):
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
-			displayName="End year (2012 is recommended)",
+			displayName="End year",
 			name="end_year",
 			datatype="String",
 			parameterType="Optional",
@@ -1681,7 +1695,7 @@ class rasterizeCfactorForUsle(object):
 			direction="Input")
 
 		param6 = arcpy.Parameter(
-			displayName="Output crop rotation raster, select output folder",
+			displayName="Output crop rotation raster",
 			name="crop_rotation_raster",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1689,14 +1703,14 @@ class rasterizeCfactorForUsle(object):
 		param6.symbology = rotationSymbologyFile
 
 		param7 = arcpy.Parameter(
-			displayName="Output C-factor raster (high estimate), select output folder",
+			displayName="Output C-factor raster (high estimate)",
 			name="output_c_factor_high",
 			datatype="Raster Layer",
 			parameterType="Required",
 			direction="Output")
 
 		param8 = arcpy.Parameter(
-			displayName="Output C-factor raster (low estimate), select output folder",
+			displayName="Output C-factor raster (low estimate)",
 			name="output_c_factor_low",
 			datatype="Raster Layer",
 			parameterType="Required",
@@ -1729,6 +1743,7 @@ class rasterizeCfactorForUsle(object):
 		parameter.  This method is called after internal validation."""
 		checkForSpaces(parameters)
 		checkProjectionsOfInputs(parameters)
+		checkDupOutput(parameters)
 		return
 
 	def execute(self, parameters, messages):
@@ -1899,14 +1914,14 @@ class erosionScore(object):
 			direction="Input")
 
 		param5 = arcpy.Parameter(
-			displayName="Output erosion vulnerability index raster, select output folder",
+			displayName="Output erosion vulnerability index raster",
 			name="erosion_score_raster",
 			datatype="Raster Layer",
 			parameterType="Optional",
 			direction="Output")
 
 		param6 = arcpy.Parameter(
-			displayName="Output summary table, select output folder",
+			displayName="Output summary table",
 			name="output_summary_table",
 			datatype="Table",
 			parameterType="Optional",
@@ -1941,6 +1956,7 @@ class erosionScore(object):
 		parameter.  This method is called after internal validation."""
 		checkForSpaces(parameters)
 		checkProjectionsOfInputs(parameters)
+		checkDupOutput(parameters)
 		return
 
 	def execute(self, parameters, messages):
