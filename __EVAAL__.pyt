@@ -700,8 +700,9 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 	arcpy.AddMessage("Projecting gSSURGO...")
 	env.snapRaster = demFile
 	env.extent = demFile
-	cellSize = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
-	env.cellSize = cellSize
+	
+	cs = arcpy.Describe(demFile).children[0].meanCellHeight
+	env.cellSize = cs
 	arcpy.Clip_analysis(gssurgoGdb + '/MUPOLYGON', watershedFile\
 		, tempGdb + '/MUPOLYGON_clip_' + randId)
 	arcpy.Project_management(tempGdb + '/MUPOLYGON_clip_' + randId\
@@ -711,7 +712,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 	arcpy.AddJoin_management('mupolygon', 'MUKEY', attAveByCompFile, 'element')
 	outField = 'attAveByComp_' + randId + '.attAve'
 	arcpy.PolygonToRaster_conversion('mupolygon', outField, outRaster\
-		,'MAXIMUM_COMBINED_AREA', '', cellSize)
+		,'MAXIMUM_COMBINED_AREA', '', cs)
 
 def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
 	outRotation, outHigh, outLow, legendFile, cFactorXwalkFile, tempDir, tempGdb):
