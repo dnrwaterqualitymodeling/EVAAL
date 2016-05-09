@@ -5,6 +5,7 @@ import sys
 import urllib
 import ftplib
 import zipfile
+import datetime
 import time
 import shutil
 import subprocess
@@ -1230,7 +1231,7 @@ class createCurveNumberRaster(object):
 			parameterType="Optional",
 			direction="Input")
 		param1.filter.type = "ValueList"
-		param1.filter.list = range(2008,2013)
+		param1.filter.list = range(2008,datetime.date.today().year - 1)
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
@@ -1240,8 +1241,8 @@ class createCurveNumberRaster(object):
 			parameterType="Optional",
 			direction="Input")
 		param2.filter.type = "ValueList"
-		param2.filter.list = range(2009,2014)
-		param2.value = 2013
+		param2.filter.list = range(2009,datetime.date.today().year)
+		param2.value = datetime.date.today().year - 1
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",
@@ -1659,7 +1660,7 @@ class rasterizeCfactorForUsle(object):
 			parameterType="Optional",
 			direction="Input")
 		param1.filter.type = "ValueList"
-		param1.filter.list = range(2008,2013)
+		param1.filter.list = range(2008,datetime.date.today().year - 1)
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
@@ -1669,8 +1670,8 @@ class rasterizeCfactorForUsle(object):
 			parameterType="Optional",
 			direction="Input")
 		param2.filter.type = "ValueList"
-		param2.filter.list = range(2009,2014)
-		param2.value = 2013
+		param2.filter.list = range(2009,datetime.date.today().year)
+		param2.value = datetime.date.today().year - 1
 
 		param3 = arcpy.Parameter(
 			displayName="Use locally stored Cropland Data Layers?",

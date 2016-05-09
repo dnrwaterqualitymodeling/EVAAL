@@ -1,2 +1,4 @@
 Thumbs.db
 *.xml
+.project
+.pydevproject
