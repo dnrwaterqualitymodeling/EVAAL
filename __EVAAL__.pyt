@@ -282,7 +282,7 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 	ping = subprocess.call(['ping', '-n', '1', 'nassgeodata.gmu.edu'])
 	if ping == 1:
 		arcpy.AddError('The CropScape server is down. Please try again later, or download local \
-			Cropland Data Layers at http://www.nass.usda.gov/research/Cropland/Release/index.htm')
+			Cropland Data Layers at https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php')
 	#unclipped
 	cdlTiffs_fl = []
 	for year in years:
@@ -829,6 +829,8 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		dairyBool2 = (pAlfalfa + pPasture) >= 1./5
 		if noDataBool:
 			rot = "No Data"
+			c_high = None
+			c_low = None
 		elif contCornBool:
 			rot = "Continuous Corn"
 		elif cashGrainBool:
@@ -860,7 +862,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 			else:
 				c_high = float(c_ave)
 				c_low = float(c_ave)
-		if rot != "No agriculture":
+		if rot != "No agriculture" and rot != "No Data":
 			rotBool = cFactorXwalk['LAND_COVER'] == rot
 			highBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['High', '']))
 			lowBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['Low', '']))
