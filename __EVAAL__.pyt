@@ -302,7 +302,8 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 			downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
 			urllib.urlretrieve(tiffUrl, downloadTiff)
 		except:
-			arcpy.AddError("The CropScape server failed. Please download the layers to your hard drive at http://www.nass.usda.gov/research/Cropland/Release/index.htm")
+			arcpy.AddError('The CropScape server is down. Please try again later, or download local \
+				Cropland Data Layers at https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php')
 		cdlTiffs_fl.append(downloadTiff)
 
 	# For clipping to watershed extent
