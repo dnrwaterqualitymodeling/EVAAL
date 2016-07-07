@@ -282,7 +282,7 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 	ping = subprocess.call(['ping', '-n', '1', 'nassgeodata.gmu.edu'])
 	if ping == 1:
 		arcpy.AddError('The CropScape server is down. Please try again later, or download local \
-			Cropland Data Layers at https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php')
+			Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
 	#unclipped
 	cdlTiffs_fl = []
 	for year in years:
@@ -303,7 +303,7 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 			urllib.urlretrieve(tiffUrl, downloadTiff)
 		except:
 			arcpy.AddError('The CropScape server is down. Please try again later, or download local \
-				Cropland Data Layers at https://www.nass.usda.gov/Research_and_Science/Cropland/Release/index.php')
+				Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
 		cdlTiffs_fl.append(downloadTiff)
 
 	# For clipping to watershed extent
