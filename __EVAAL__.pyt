@@ -87,7 +87,7 @@ def setupTemp(tempDir, tempGdb):
 	for tempFile in tempFiles:
 		arcpy.AddMessage('Deleting ' + tempFile + '...')
 		arcpy.Delete_management(tempFile)
-		arcpy.Compact_management(tempGdb)	
+		arcpy.Compact_management(tempGdb)
 	os.chdir(tempDir)
 	fileList = os.listdir('.')
 	for f in fileList:
@@ -99,15 +99,15 @@ def setupTemp(tempDir, tempGdb):
 			os.remove(f)
 	arcpy.AddMessage('#################')
 	arcpy.AddMessage(' ')
-	
+
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	if env.cellSize == 'MAXOF':
 		cellSize = 3
 	else:
@@ -171,11 +171,11 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	rid = str(random.randint(11111,99999))
 
 	# Intermediate data
@@ -320,7 +320,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	demFile, outCnLow, outCnHigh, cnLookupFile, coverTypeLookupFile, tempDir,tempGdb):
 
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
@@ -453,7 +453,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	# Intermediate Files
 	clipCn = tempGdb + '/clipCn_' + rid
 	runoffTable = tempDir + '/runoffTable_' + rid + '.dbf'
@@ -487,17 +487,17 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
-	
+
 	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
 	arcpy.AddMessage('All no data returned: ' + str(allnoDat))
 	if allnoDat == 1:
 		arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
-		
+
 		# Null raster being saved
 		sinkLarge.save(nonContributingAreasFile)
-		
+
 		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
-	else:      
+	else:
 		arcpy.AddMessage("Calculating runoff...")
 		CN = Raster(cnFile)
 		prcpInches = Raster(prcpFile) / 1000.
@@ -521,7 +521,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
 		trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
-	
+
 		#if trueSinkCount > 0:
 		trueSinks = []
 		rows = arcpy.da.SearchCursor(trueSinkTable, ['Value'])
@@ -531,6 +531,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
 		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
+		seeds.save(tempGdb + '/seeds_' + rid)
 		nonContributingAreas = Watershed(fdr, seeds)
 		del seeds, fdr
 
@@ -567,9 +568,9 @@ def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFil
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	env.extent = demFile
-													
+
 	if grassWaterwaysFile is None or grassWaterwaysFile in ['', '#']:
 		demRunoff = Raster(demFile)
 	else:
@@ -596,12 +597,12 @@ def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFil
 def streamPowerIndex(demFile, fillFile, facThreshold, outFile, tempDir, tempGdb):
 
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
-	
+
+
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
@@ -672,7 +673,7 @@ def makeTableFromAggregatedData(dataDict, tableFile):
 
 def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, tempDir, tempGdb):
 	randId = str(random.randint(1e5,1e6))
-	
+
 	setupTemp(tempDir,tempGdb)
 
 	env.scratchWorkspace = wd + '/temp'
@@ -702,7 +703,7 @@ def rasterizeKfactor(gssurgoGdb, attField, demFile, watershedFile, outRaster, te
 	arcpy.AddMessage("Projecting gSSURGO...")
 	env.snapRaster = demFile
 	env.extent = demFile
-	
+
 	cs = arcpy.Describe(demFile).children[0].meanCellHeight
 	env.cellSize = cs
 	arcpy.Clip_analysis(gssurgoGdb + '/MUPOLYGON', watershedFile\
@@ -900,10 +901,10 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	facThreshold, outFile, tempDir, tempGdb):
 
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.mask = demFile
@@ -967,11 +968,11 @@ def calculateErosionScore(usleFile, spiFile, zonalFile, zonalId, demFile, outEro
 	randId = str(random.randint(1e5,1e6))
 
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
+
 	env.snapRaster = demFile
 	env.extent = demFile
 	env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
