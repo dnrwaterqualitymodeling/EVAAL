@@ -4,3 +4,5 @@ Thumbs.db
 .pydevproject
 temp/scratch.gdb/*
 temp/scratch/*
+temp/info/*
+temp/log
