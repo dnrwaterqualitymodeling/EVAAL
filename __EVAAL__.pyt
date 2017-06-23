@@ -888,7 +888,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		'', minResCdlTiff)
 
 	wtm = arcpy.Describe(rasterTemplateFile).spatialReference
-	outRes = int(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
+	outRes = float(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
 	env.mask = rasterTemplateFile
 	env.snapRaster = rasterTemplateFile
 	env.extent = rasterTemplateFile
