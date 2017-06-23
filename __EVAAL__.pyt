@@ -1062,7 +1062,7 @@ class conditionTheLidarDem(object):
 		param1.filter.list = ["Polygon"]
 
 		param2 = arcpy.Parameter(
-			displayName="Raw LiDAR DEM",
+			displayName="Raw LiDAR DEM (vertical units in meters)",
 			name="raw_lidar_dem",
 			datatype="Raster Layer",
 			parameterType="Required",

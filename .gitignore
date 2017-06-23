@@ -2,3 +2,5 @@ Thumbs.db
 *.xml
 .project
 .pydevproject
+temp/scratch.gdb/*
+temp/scratch/*
