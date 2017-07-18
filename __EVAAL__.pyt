@@ -439,7 +439,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	env.mask = demFile
 
 	wtm = arcpy.Describe(demFile).spatialReference
-	outRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
+	outRes = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 	arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
 	arcpy.ProjectRaster_management(outCnHigh1, outCnHigh, wtm, 'BILINEAR', outRes)
 
@@ -539,12 +539,12 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
 		arcpy.MakeFeatureLayer_management(nonContribRaw, 'nonContribRaw_layer')
 		arcpy.MakeFeatureLayer_management(watershedFile, 'watershed_layer')
-			# To select those nonContributing watersheds that are within the target watershed
+		# To select those nonContributing watersheds that are within the target watershed
 		arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
 			, '', 'NEW_SELECTION')
 		arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
-			#Convert only those nonContributing watersheds that are in the target to rasters
-				#grid_code for 10.1 and gridcode for 10.2
+		#Convert only those nonContributing watersheds that are in the target to rasters
+		#grid_code for 10.1 and gridcode for 10.2
 		if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
 			colNm = 'gridcode'
 		else:
@@ -889,7 +889,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 		'', minResCdlTiff)
 
 	wtm = arcpy.Describe(rasterTemplateFile).spatialReference
-	outRes = int(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
+	outRes = float(arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0))
 	env.mask = rasterTemplateFile
 	env.snapRaster = rasterTemplateFile
 	env.extent = rasterTemplateFile
@@ -1063,7 +1063,7 @@ class conditionTheLidarDem(object):
 		param1.filter.list = ["Polygon"]
 
 		param2 = arcpy.Parameter(
-			displayName="Raw LiDAR DEM",
+			displayName="Raw LiDAR DEM (vertical units in meters)",
 			name="raw_lidar_dem",
 			datatype="Raster Layer",
 			parameterType="Required",
