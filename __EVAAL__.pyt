@@ -462,6 +462,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribRaw = tempGdb + '/nonContribRaw_' + rid
 	nonContribFiltered = tempGdb + '/nonContribFiltered_' + rid
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
+	inc_runoff = tempGdb + '/inc_runoff_' + rid
+	cum_runoff = tempGdb + '/cum_runoff_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -505,8 +507,10 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		Ia = 0.2 * S
 		runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
 		runoffVolume = (runoffDepth * 0.0254) * A
+		runoffVolume.save(inc_runoff)
 		fdr = FlowDirection(optimFillFile)
 		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
+		runoffAcc.save(cum_runoff)
 		del CN, S, Ia, runoffDepth
 
 		arcpy.AddMessage("Comparing runoff to sink capacity...")
@@ -939,7 +943,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	n = 1.3
 	b0 = 0.09
 	arcpy.AddMessage('Calculating slope/slope-length...')
-	LS10  =  (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
+	LS10 = (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
 	del a0, m, n, b0
 	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
 	del LS10
