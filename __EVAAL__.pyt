@@ -933,7 +933,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
 	facLand = Plus(Con(fac < facThreshold, fac), 1.0)
 	del fac
-	Am = facLand * 100
+	Am = facLand * 10
 	del facLand
 	arcpy.AddMessage('Calculating br term of slope/slope-length equation...')
 	br = Slope(resampleDemFile, "DEGREE") * (math.pi / 180.0)
