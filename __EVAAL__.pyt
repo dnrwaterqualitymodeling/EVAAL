@@ -403,6 +403,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	for row in rows:
 		if row[0] is None:
 			hsg = ['A','B','C','D']
+		elif len(row[0]) == 3:
+			hsg = [str(row[0][2])]
 		else:
 			hsg = [str(row[0][0])]
 		lcs = []
