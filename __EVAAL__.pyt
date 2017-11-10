@@ -1025,7 +1025,7 @@ class Toolbox(object):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
         self.label = "__EVAAL__"
-        self.alias = ""
+        self.alias = "evaal"
         # List of tool classes associated with this toolbox
         self.tools = [conditionTheLidarDem,
             downloadPrecipitationData,
