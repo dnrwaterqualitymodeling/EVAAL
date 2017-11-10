@@ -500,14 +500,15 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
         CN = Raster(cnFile)
         prcpInches = Raster(prcpFile) / 1000.
         S = (1000.0 / CN) - 10.0
-        Ia = 0.2 * S
-        runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
+        Ia = Con(CN > 95, 0.05 * S, 0.2 * S)
+        runoffDepth_no_inf = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
+        runoffDepth = Con(prcpInches > Ia, runoffDepth_no_inf, 0)
         runoffVolume = (runoffDepth * 0.0254) * A
         runoffVolume.save(inc_runoff)
         fdr = FlowDirection(optimFillFile)
         runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
         runoffAcc.save(cum_runoff)
-        del CN, S, Ia, runoffDepth
+        del CN, S, Ia, runoffDepth, runoffDepth_no_inf
 
         arcpy.AddMessage("Comparing runoff to sink capacity...")
         arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
@@ -644,7 +645,7 @@ def aggregateByElement(tableName, attField, elemField, wtField, stat):
     wt = wt[inds]
     attAve = np.zeros([len(np.unique(elem)),2], dtype=np.float)
     for i,m in enumerate(np.unique(elem)):
-                ind = np.where(elem == m)
+        ind = np.where(elem == m)
         if stat == 'wa':
             attAve[i,0:2] = np.array(np.average(att[ind], weights=wt[ind], returned=True))
         elif stat == 'top':
