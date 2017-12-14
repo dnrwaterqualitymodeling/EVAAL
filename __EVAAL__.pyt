@@ -6,7 +6,6 @@ import urllib
 import ftplib
 import zipfile
 import datetime
-import time
 import shutil
 import subprocess
 import xml
@@ -280,6 +279,44 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
     #unclipped
     cdlTiffs_fl = []
     for year in years:
+        year = str(year)
+        clipUrl = cdlUrl\
+            + r'year='\
+            + year + r'&'\
+            + r'bbox='\
+            + str(ext.XMin) + ','\
+            + str(ext.YMin) + ','\
+            + str(ext.XMax) + ','\
+            + str(ext.YMax)
+        try:
+            downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
+            urllib.urlretrieve(clipUrl, downloadLocXml)
+            tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
+            downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
+            urllib.urlretrieve(tiffUrl, downloadTiff)
+        except:
+            arcpy.AddError('The CropScape server is down. Please try again later, or download local \
+                Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
+        cdlTiffs_fl.append(downloadTiff)
+        year = str(year)
+        clipUrl = cdlUrl\
+            + r'year='\
+            + year + r'&'\
+            + r'bbox='\
+            + str(ext.XMin) + ','\
+            + str(ext.YMin) + ','\
+            + str(ext.XMax) + ','\
+            + str(ext.YMax)
+        try:
+            downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
+            urllib.urlretrieve(clipUrl, downloadLocXml)
+            tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
+            downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
+            urllib.urlretrieve(tiffUrl, downloadTiff)
+        except:
+            arcpy.AddError('The CropScape server is down. Please try again later, or download local \
+                Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
+        cdlTiffs_fl.append(downloadTiff)
         year = str(year)
         clipUrl = cdlUrl\
             + r'year='\
