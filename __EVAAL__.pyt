@@ -389,7 +389,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
 		, 'NAD_1983_To_HARN_Wisconsin')
 	arcpy.JoinField_management(mapunits_prj, "MUKEY", gSSURGO + "/muaggatt" \
-		, "MUKEY", "hydgrpdcd")
+		, arcpy.ListFields(gSSURGO + "/muaggatt", "MUKEY")[0].baseName, "hydgrpdcd")
 	arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
 		, 'KEEP_COMMON', '', 'INTERSECT')
 
