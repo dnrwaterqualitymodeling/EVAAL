@@ -516,7 +516,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		del CN, S, Ia, runoffDepth
 
 		arcpy.AddMessage("Comparing runoff to sink capacity...")
-		arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
+		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
 			#Grab the maximum amount of runoff for each sink
 		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
 			#Grab the total of the storage volume for each sink
