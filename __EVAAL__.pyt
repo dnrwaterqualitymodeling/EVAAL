@@ -536,7 +536,11 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		del row, rows
 
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
+		if len(trueSinks) == 1:
+			qry = 'VALUE IN ' + str(tuple(trueSinks)).replace(',', '')
+		else:
+			qry = 'VALUE IN ' + str(tuple(trueSinks))
+		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, qry)
 		nonContributingAreas = Watershed(fdr, seeds)
 		del seeds, fdr
 
