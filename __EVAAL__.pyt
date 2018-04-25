@@ -403,6 +403,8 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	for row in rows:
 		if row[0] is None:
 			hsg = ['A','B','C','D']
+		elif len(row[0]) == 3:
+			hsg = [str(row[0][2])]
 		else:
 			hsg = [str(row[0][0])]
 		lcs = []
@@ -462,6 +464,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribRaw = tempGdb + '/nonContribRaw_' + rid
 	nonContribFiltered = tempGdb + '/nonContribFiltered_' + rid
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
+	inc_runoff = tempGdb + '/inc_runoff_' + rid
+	cum_runoff = tempGdb + '/cum_runoff_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -505,12 +509,14 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		Ia = 0.2 * S
 		runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
 		runoffVolume = (runoffDepth * 0.0254) * A
+		runoffVolume.save(inc_runoff)
 		fdr = FlowDirection(optimFillFile)
 		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
+		runoffAcc.save(cum_runoff)
 		del CN, S, Ia, runoffDepth
 
 		arcpy.AddMessage("Comparing runoff to sink capacity...")
-		arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
+		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
 			#Grab the maximum amount of runoff for each sink
 		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
 			#Grab the total of the storage volume for each sink
@@ -530,8 +536,14 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		del row, rows
 
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
+
+		if len(trueSinks) == 1:
+			qry = 'VALUE IN ' + str(tuple(trueSinks)).replace(',', '')
+		else:
+			qry = 'VALUE IN ' + str(tuple(trueSinks))
+		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, qry)
 		seeds.save(tempGdb + '/seeds_' + rid)
+
 		nonContributingAreas = Watershed(fdr, seeds)
 		del seeds, fdr
 
@@ -930,7 +942,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	arcpy.AddMessage('Removing flow accumulation pixels above threshold...')
 	facLand = Plus(Con(fac < facThreshold, fac), 1.0)
 	del fac
-	Am = facLand * 100
+	Am = facLand * 10
 	del facLand
 	arcpy.AddMessage('Calculating br term of slope/slope-length equation...')
 	br = Slope(resampleDemFile, "DEGREE") * (math.pi / 180.0)
@@ -940,7 +952,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
 	n = 1.3
 	b0 = 0.09
 	arcpy.AddMessage('Calculating slope/slope-length...')
-	LS10  =  (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
+	LS10 = (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
 	del a0, m, n, b0
 	arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
 	del LS10
