@@ -39,7 +39,7 @@ startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 def checkForSpaces(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer','Table']:
+			if p.direction == 'Input' and p.datatype in ['Feature Layer','Feature Class','Raster Layer','Raster Dataset','Table']:
 				# Value of paramater can only be string type. Doesn't work for multivalue
 				if not p.multiValue:
 					path = arcpy.Describe(p.value).catalogPath
@@ -49,7 +49,7 @@ def checkForSpaces(parameters):
 def replaceSpacesWithUnderscores(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Output' and p.datatype in ['Feature Layer','Raster Layer','Table']:
+			if p.direction == 'Output' and p.datatype in ['Feature Layer','Feature Class','Raster Layer','Raster Dataset','Table']:
 				if ' ' in p.value.value:
 					p.value = p.value.value.replace(' ', '_')
 					p.setWarningMessage('Spaces in file path were replaced with underscores.')
@@ -57,7 +57,7 @@ def replaceSpacesWithUnderscores(parameters):
 def checkProjectionsOfInputs(parameters):
 	for p in parameters:
 		if p.value:
-			if p.direction == 'Input' and p.datatype in ['Feature Layer','Raster Layer']:
+			if p.direction == 'Input' and p.datatype in ['Feature Layer','Feature Class','Raster Layer','Raster Dataset']:
 				# Value of paramater can only be string type. Doesn't work for multivalue
 				if not p.multiValue:
 					cs = arcpy.Describe(p.value).spatialReference.name
