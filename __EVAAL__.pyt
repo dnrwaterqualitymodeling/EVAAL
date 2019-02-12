@@ -466,6 +466,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
 	inc_runoff = tempGdb + '/inc_runoff_' + rid
 	cum_runoff = tempGdb + '/cum_runoff_' + rid
+	sinkLarge_file = tempGdb + '/sink_large' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -516,6 +517,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		del CN, S, Ia, runoffDepth
 
 		arcpy.AddMessage("Comparing runoff to sink capacity...")
+		sinkLarge.save(sinkLarge_file)
 		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
 			#Grab the maximum amount of runoff for each sink
 		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
