@@ -511,22 +511,34 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
 		runoffVolume = (runoffDepth * 0.0254) * A
 		runoffVolume.save(inc_runoff)
+		arcpy.AddMessage("Comparing runoff to sink capacity")
 		fdr = FlowDirection(optimFillFile)
 		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
 		runoffAcc.save(cum_runoff)
-		del CN, S, Ia, runoffDepth
-
-		arcpy.AddMessage("Comparing runoff to sink capacity...")
+		#### Tristan Nunez fix for sinks in series
+		storageAcc = FlowAccumulation(fdr, storageVolume, 'FLOAT')
+		runoffAcc2 = runoffAcc - storageAcc
+		maxFlow = ZonalStatistics(sinkLarge, 'VALUE', runoffAcc, 'MAXIMUM')
+		maxFlowInSink = Con(runoffAcc == maxFlow, 1)
+		flowOut = Con(maxFlowInSink, runoffAcc2)
 		sinkLarge.save(sinkLarge_file)
 		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
-			#Grab the maximum amount of runoff for each sink
-		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
-			#Grab the total of the storage volume for each sink
-		ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
+		ZonalStatisticsAsTable(sinkLarge, "VALUE", flowOut, runoffTable, "DATA", "MAXIMUM")
+		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"MAX" < 0')
+		####
+		del CN, S, Ia, runoffDepth
 
-		arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
+		# arcpy.AddMessage("Comparing runoff to sink capacity...")
+		# sinkLarge.save(sinkLarge_file)
+		# arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+			#Grab the maximum amount of runoff for each sink
+		# ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
+			#Grab the total of the storage volume for each sink
+		# ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
+
+		# arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
 			# create new table, IF the total storage volume is greater than the max runoff
-		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
+		# arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 
 		trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
 	
