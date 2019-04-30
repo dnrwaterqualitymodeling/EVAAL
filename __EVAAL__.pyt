@@ -466,6 +466,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
 	inc_runoff = tempGdb + '/inc_runoff_' + rid
 	cum_runoff = tempGdb + '/cum_runoff_' + rid
+	cum_storage = tempGdb + '/cum_storage_' + rid
+	cum_runoff2 = tempGdb + '/cum_runoff_' + rid
 	sinkLarge_file = tempGdb + '/sink_large' + rid
 
 	env.scratchWorkspace = tempDir
@@ -519,8 +521,10 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		#### Tristan Nunez fix for sinks in series
 		arcpy.AddMessage("Computing storage accumulation")
 		storageAcc = FlowAccumulation(fdr, storageVolume, 'FLOAT')
+		storageAcc.save(cum_storage)
 		arcpy.AddMessage("Runoff minus storage")
 		runoffAcc2 = runoffAcc - storageAcc
+		runoffAcc2.save(cum_runoff2)
 		arcpy.AddMessage("Testing for sink capacity after storm")
 		maxFlow = ZonalStatistics(sinkLarge, 'VALUE', runoffAcc, 'MAXIMUM')
 		maxFlowInSink = Con(runoffAcc == maxFlow, 1)
