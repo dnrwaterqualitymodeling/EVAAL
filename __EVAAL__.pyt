@@ -467,8 +467,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	inc_runoff = tempGdb + '/inc_runoff_' + rid
 	cum_runoff = tempGdb + '/cum_runoff_' + rid
 	cum_storage = tempGdb + '/cum_storage_' + rid
-	cum_runoff2 = tempGdb + '/cum_runoff_' + rid
-	sinkLarge_file = tempGdb + '/sink_large' + rid
+	cum_runoff2 = tempGdb + '/cum_runoff2_' + rid
+	flow_out = tempGdb + '/flow_out_' + rid
+	sinkLarge_file = tempGdb + '/sink_large_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -493,6 +494,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	meanPrecip = ZonalStatistics(sinkGroup, "Value", prcpMeters, "MEAN", "DATA")
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
+	arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+	sinkLarge.save(sinkLarge_file)
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
 	
 	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
@@ -529,8 +532,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		maxFlow = ZonalStatistics(sinkLarge, 'VALUE', runoffAcc, 'MAXIMUM')
 		maxFlowInSink = Con(runoffAcc == maxFlow, 1)
 		flowOut = Con(maxFlowInSink, runoffAcc2)
-		sinkLarge.save(sinkLarge_file)
-		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+		flowOut.save(flow_out)
 		arcpy.AddMessage("Identifying true sinks")
 		ZonalStatisticsAsTable(sinkLarge, "VALUE", flowOut, runoffTable, "DATA", "MAXIMUM")
 		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"MAX" < 0')
