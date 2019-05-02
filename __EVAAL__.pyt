@@ -502,6 +502,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	cum_runoff2 = tempGdb + '/cum_runoff2_' + rid
 	flow_out = tempGdb + '/flow_out_' + rid
 	sinkLarge_file = tempGdb + '/sink_large_' + rid
+	seeds = tempGdb + '/seeds_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -527,9 +528,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
 	arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
-	arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
+	# arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
 	sinkLarge.save(sinkLarge_file)
-	arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
 	
 	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
@@ -581,17 +581,83 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		for row in rows:
 			trueSinks.append(row[0])
 		del row, rows
+		trueSinks = np.array(trueSinks)
 		
-		arcpy.AddMessage("Flagging true sinks")
-		with arcpy.da.UpdateCursor(sinkLarge, ['VALUE', 'true_sink']) as cursor:
-			for row in cursor:
-				if row[0] in trueSinks:
-					row[1] = 1
-				else:
-					row[1] = 0
-				cursor.updateRow(row)
-		arcpy.AddMessage("Creating watershed seeds")		
-		seeds = Lookup(sinkLarge, "true_sink")
+		# ArcGIS set membership reclass functions (Reclassify, InList) are very slow
+		# RasterToNumpyArray is used in blocks in an attempt to reduce computation time
+		
+		blocksize = 512
+			
+		xrng = range(0, sinkLarge.width, blocksize)
+		yrng = range(0, sinkLarge.height, blocksize)
+		
+		tempfiles = []
+		blockno = 0
+		arcpy.AddMessage("Blocking sinks grids for numpy set membership")
+		arcpy.ClearEnvironment("extent")
+		for x in xrng:
+			for y in yrng:
+				
+				# Lower left coordinate of block (in map units)
+				mx = sinkLarge.extent.XMin + x * sinkLarge.meanCellWidth
+				my = sinkLarge.extent.YMin + y * sinkLarge.meanCellHeight
+				# Upper right coordinate of block (in cells)
+				lx = min([x + blocksize, sinkLarge.width])
+				ly = min([y + blocksize, sinkLarge.height])
+				
+				blck = arcpy.RasterToNumPyArray(sinkLarge, arcpy.Point(mx, my), lx-x, ly-y)
+				true_sink_blck = np.isin(blck, trueSinks).astype(int)
+				# Convert data block back to raster
+				raster_blck = arcpy.NumPyArrayToRaster(
+					true_sink_blck,
+					arcpy.Point(mx, my),
+					sinkLarge.meanCellWidth,
+					sinkLarge.meanCellHeight
+				)
+				# Save on disk temporarily as 'filename_#.ext'
+				# filetemp = ('_%i.' % blockno).join(seeds.rsplit('.',1))
+				filetemp = seeds + ('_%i' % blockno)
+				raster_blck.save(filetemp)
+
+				# Maintain a list of saved temporary files
+				tempfiles.append(filetemp)
+				blockno += 1
+		
+		env.extent = demFile		
+		# Mosaic temporary files
+		arcpy.AddMessage("Mosaic blocks")
+		arcpy.Mosaic_management(';'.join(tempfiles[1:]), tempfiles[0])
+		if arcpy.Exists(seeds):
+			arcpy.Delete_management(seeds)
+		arcpy.Rename_management(tempfiles[0], seeds)
+
+		# Remove temporary files
+		for fileitem in tempfiles:
+			if arcpy.Exists(fileitem):
+				arcpy.Delete_management(fileitem)
+
+		# Release raster objects from memory
+		del raster_blck
+		
+        #   noting that (x, y) is the lower left coordinate (in cells)
+		# sink_ext = arcpy.Describe(sinkLarge).extent
+		# cellsize = float(arcpy.GetRasterProperties_management(sinkLarge, 'CELLSIZEX').getOutput(0))
+		# nrows = int(arcpy.GetRasterProperties_management(sinkLarge, 'ROWCOUNT').getOutput(0))
+		# for r in range(1, nrows):
+			# ll = arcpy.Point(sink_ext.XMin, sink_ext.YMax - r * cellsize)
+			# sinkLargeRow = arcpy.RasterToNumPyArray(sinkLarge, ll, nrows=1)
+			# row_bool = np.in1d(sinkLargeRow, np.array(trueSinks))
+		
+		# arcpy.AddMessage("Flagging true sinks")
+		# with arcpy.da.UpdateCursor(sinkLarge, ['VALUE', 'true_sink']) as cursor:
+			# for row in cursor:
+				# if row[0] in trueSinks:
+					# row[1] = 1
+				# else:
+					# row[1] = 0
+				# cursor.updateRow(row)
+		# arcpy.AddMessage("Creating watershed seeds")		
+		# seeds = InList(sinkLarge, trueSinks)
 		
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
 		nonContributingAreas = Watershed(fdr, seeds)
