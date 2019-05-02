@@ -527,7 +527,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
 	arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+	arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
 	sinkLarge.save(sinkLarge_file)
+	arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
 	
 	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
@@ -579,13 +581,19 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		for row in rows:
 			trueSinks.append(row[0])
 		del row, rows
-
+		
+		arcpy.AddMessage("Flagging true sinks")
+		with arcpy.da.UpdateCursor(sinkLarge, ['VALUE', 'true_sink']) as cursor:
+			for row in cursor:
+				if row[0] in trueSinks:
+					row[1] = 1
+				else:
+					row[1] = 0
+				cursor.updateRow(row)
+		arcpy.AddMessage("Creating watershed seeds")		
+		seeds = Lookup(sinkLarge, "true_sink")
+		
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		if len(trueSinks) == 1:
-			qry = 'VALUE IN ' + str(tuple(trueSinks)).replace(',', '')
-		else:
-			qry = 'VALUE IN ' + str(tuple(trueSinks))
-		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, qry)
 		nonContributingAreas = Watershed(fdr, seeds)
 		del seeds, fdr
 
