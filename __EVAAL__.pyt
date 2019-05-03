@@ -210,13 +210,12 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
     f.write(asciiData)
     f.close()
     arcpy.AddMessage("Converting ASCII data to temporary raster...")
+	cs = arcpy.SpatialReference('NAD 1983')
     arcpy.ASCIIToRaster_conversion(prcpAscii, prcpFile, 'INTEGER')
-
-    cs = arcpy.SpatialReference('NAD 1983')
     arcpy.DefineProjection_management(prcpFile, cs)
-
     env.cellSize = arcpy.GetRasterProperties_management(rasterTemplateFile, 'CELLSIZEX').getOutput(0)
-    env.mask = rasterTemplateFile
+    env.outputCoordinateSystem = cs
+	env.mask = rasterTemplateFile
     env.extent = rasterTemplateFile
     arcpy.AddMessage("Clipping to extent...")
     prcpFileClp = prcpFile + '_clipped'
@@ -228,7 +227,8 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
     #changed a second 'rasterTemplateFile' to clSz
     #	thinking being that maybe it can't read the cell size from the raster
     arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
-
+	
+	env.outputCoordinateSystem = rasterTemplateFile
     arcpy.ProjectRaster_management(prcpFileClp, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
         , clSz, transformation)
     arcpy.AddMessage('Finished projecting')
@@ -660,8 +660,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		# seeds = InList(sinkLarge, trueSinks)
 		
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		nonContributingAreas = Watershed(fdr, seeds)
-		del seeds, fdr
+		seeds2 = Con(seeds == 1, 1)
+		nonContributingAreas = Watershed(fdr, seeds2)
+		del seeds, seeds2, fdr
 
 		arcpy.AddMessage("Saving output...")
 		arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
