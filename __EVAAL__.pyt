@@ -816,9 +816,9 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 
 		noDataBool = pNas == 1.
 		contCornBool = pCorn >= 3./5 and \
-			(pSoyAndGrain + pPotato + pVeggies + pAlfalfa + pPasture) == 0.
+			(pSoyAndGrain + pPotato + pVeggies + pAlfalfa + pPasture) < 1./5
 		cashGrainBool = (pCorn + pSoyAndGrain) >= 2./5 and \
-			(pPotato + pVeggies + pAlfalfa + pPasture) == 0.
+			(pPotato + pVeggies + pAlfalfa + pPasture) < 1./5
 		dairyBool1 = pAlfalfa >= 1./5 and \
 			(pCorn + pSoyAndGrain) >= 1./5
 		dairyPotatoBool = pPotato >= 1./5 and \
@@ -826,7 +826,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 			pVeggies == 0.
 		potGrnVegBool = (pPotato + pVeggies) >= 1./5
 		pastureBool = (pPasture + pAlfalfa) >= 2./5 and \
-			(pCorn + pSoyAndGrain + pPotato + pVeggies) == 0.
+			(pCorn + pSoyAndGrain + pPotato + pVeggies) < 1./5
 		dairyBool2 = (pAlfalfa + pPasture) >= 1./5
 		if noDataBool:
 			rot = "No Data"
