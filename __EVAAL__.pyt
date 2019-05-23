@@ -11,6 +11,7 @@ import subprocess
 import xml
 import json
 import math
+import ssl
 import numpy as np
 from subprocess import Popen
 from arcpy import env
@@ -63,7 +64,6 @@ def checkProjectionsOfInputs(parameters):
 					if cs not in ['NAD_1983_HARN_Transverse_Mercator', 'NAD_1983_HARN_Wisconsin_TM']:
 						p.setErrorMessage('Dataset must be projected in \
 							NAD_1983_HARN_Transverse_Mercator coordinate system.')
-
 
 def checkDupOutput(parameters):
 	output_names = []
@@ -294,55 +294,19 @@ def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
 			urllib.urlretrieve(clipUrl, downloadLocXml)
 			tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
 			downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
-			urllib.urlretrieve(tiffUrl, downloadTiff)
+			# This restores the same behavior as before.
+			context = ssl._create_unverified_context()
+			urllib.urlretrieve(tiffUrl, downloadTiff, context=context)
 		except:
 			arcpy.AddError('The CropScape server is down. Please try again later, or download local \
 				Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
 		cdlTiffs_fl.append(downloadTiff)
-		year = str(year)
-		clipUrl = cdlUrl\
-			+ r'year='\
-			+ year + r'&'\
-			+ r'bbox='\
-			+ str(ext.XMin) + ','\
-			+ str(ext.YMin) + ','\
-			+ str(ext.XMax) + ','\
-			+ str(ext.YMax)
-		try:
-			downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
-			urllib.urlretrieve(clipUrl, downloadLocXml)
-			tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
-			downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
-			urllib.urlretrieve(tiffUrl, downloadTiff)
-		except:
-			arcpy.AddError('The CropScape server is down. Please try again later, or download local \
-				Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
-		cdlTiffs_fl.append(downloadTiff)
-		year = str(year)
-		clipUrl = cdlUrl\
-			+ r'year='\
-			+ year + r'&'\
-			+ r'bbox='\
-			+ str(ext.XMin) + ','\
-			+ str(ext.YMin) + ','\
-			+ str(ext.XMax) + ','\
-			+ str(ext.YMax)
-		try:
-			downloadLocXml = tempDir + '/download_' + year + '_' + rid + '.xml'
-			urllib.urlretrieve(clipUrl, downloadLocXml)
-			tiffUrl = xml.etree.ElementTree.parse(downloadLocXml).getroot()[0].text
-			downloadTiff = tempDir + '/cdl_' + year + '_' + rid + '.tif'
-			urllib.urlretrieve(tiffUrl, downloadTiff)
-		except:
-			arcpy.AddError('The CropScape server is down. Please try again later, or download local \
-				Cropland Data Layers at https://nassgeodata.gmu.edu/CropScape/')
-		cdlTiffs_fl.append(downloadTiff)
-
+		
 	# For clipping to watershed extent
 	cdlTiffs = []
 	for i,fullCdl in enumerate(cdlTiffs_fl):
 			clipCdl = tempDir + '/cdl_' + str(i) + '_' + rid + '.tif'
-					#testing the ClippingGeometry option..
+			#testing the ClippingGeometry option..
 			arcpy.Clip_management(fullCdl, '', clipCdl, watershedCdlPrj, '#', 'ClippingGeometry')
 			cdlTiffs.append(clipCdl)
 
@@ -418,8 +382,12 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 
 	arcpy.AddMessage("Overlaying gSSURGO Hydrologic Soil Group...")
 	arcpy.Clip_analysis(gSSURGO + "/MUPOLYGON", watershedFile, clipSSURGO)
-	arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
-		, 'NAD_1983_To_HARN_Wisconsin')
+	if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) < 6:
+		arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
+			, 'NAD_1983_To_HARN_Wisconsin')
+	else:
+		arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
+			'WGS_1984_(ITRF00)_To_NAD_1983 + NAD_1983_HARN_To_WGS_1984_2')
 	arcpy.JoinField_management(mapunits_prj, "MUKEY", gSSURGO + "/muaggatt" \
 		, "MUKEY", "hydgrpdcd")
 	arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
