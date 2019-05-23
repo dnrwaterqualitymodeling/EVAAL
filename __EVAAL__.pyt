@@ -466,11 +466,12 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
 	inc_runoff = tempGdb + '/inc_runoff_' + rid
 	cum_runoff = tempGdb + '/cum_runoff_' + rid
-	cum_storage = tempGdb + '/cum_storage_' + rid
-	cum_runoff2 = tempGdb + '/cum_runoff2_' + rid
-	flow_out = tempGdb + '/flow_out_' + rid
+	# cum_storage = tempGdb + '/cum_storage_' + rid
+	# cum_runoff2 = tempGdb + '/cum_runoff2_' + rid
+	# flow_out = tempGdb + '/flow_out_' + rid
 	sinkLarge_file = tempGdb + '/sink_large_' + rid
-	seeds = tempGdb + '/seeds_' + rid
+	seeds_file1 = tempGdb + '/seeds_' + rid
+	seeds_file2 = tempGdb + '/seeds2_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -495,6 +496,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	meanPrecip = ZonalStatistics(sinkGroup, "Value", prcpMeters, "MEAN", "DATA")
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
+	sinkLarge.save(sinkLarge_file)
 	arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
 	# arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
 	sinkLarge.save(sinkLarge_file)
@@ -524,21 +526,23 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
 		runoffAcc.save(cum_runoff)
 		#### Tristan Nunez fix for sinks in series
-		arcpy.AddMessage("Computing storage accumulation")
-		storageAcc = FlowAccumulation(fdr, storageVolume, 'FLOAT')
-		storageAcc.save(cum_storage)
-		arcpy.AddMessage("Runoff minus storage")
-		runoffAcc2 = runoffAcc - storageAcc
-		runoffAcc2.save(cum_runoff2)
+		# arcpy.AddMessage("Computing storage accumulation")
+		# storageAcc = FlowAccumulation(fdr, storageVolume, 'FLOAT')
+		# storageAcc.save(cum_storage)
+		# arcpy.AddMessage("Runoff minus storage")
+		# runoffAcc2 = runoffAcc - storageAcc
+		# runoffAcc2.save(cum_runoff2)
 		arcpy.AddMessage("Testing for sink capacity after storm")
-		maxFlow = ZonalStatistics(sinkLarge, 'VALUE', runoffAcc, 'MAXIMUM')
-		maxFlowInSink = Con(runoffAcc == maxFlow, 1)
-		flowOut = Con(maxFlowInSink, runoffAcc2)
-		flowOut.save(flow_out)
-		arcpy.AddMessage("Identifying true sinks")
-		ZonalStatisticsAsTable(sinkLarge, "VALUE", flowOut, runoffTable, "DATA", "MAXIMUM")
-		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"MAX" < 0')
-		####
+		
+		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+			#Grab the maximum amount of runoff for each sink
+		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
+			#Grab the total of the storage volume for each sink
+		ZonalStatisticsAsTable(sinkLarge, "VALUE", storageVolume, storageTable, "DATA", "SUM")
+
+		arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
+			# create new table, IF the total storage volume is greater than the max runoff
+		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
 		del CN, S, Ia, runoffDepth
 		
 		trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
@@ -574,7 +578,11 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 				ly = min([y + blocksize, sinkLarge.height])
 				
 				blck = arcpy.RasterToNumPyArray(sinkLarge, arcpy.Point(mx, my), lx-x, ly-y)
-				true_sink_blck = np.isin(blck, trueSinks).astype(int)
+				blck_shp = blck.shape
+				blck = blck.flatten()
+				true_sink_blck = np.in1d(blck, trueSinks).astype(int)
+				true_sink_blck = np.reshape(true_sink_blck, blck_shp)
+				# true_sink_blck = np.isin(blck, trueSinks).astype(int)
 				# Convert data block back to raster
 				raster_blck = arcpy.NumPyArrayToRaster(
 					true_sink_blck,
@@ -584,7 +592,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 				)
 				# Save on disk temporarily as 'filename_#.ext'
 				# filetemp = ('_%i.' % blockno).join(seeds.rsplit('.',1))
-				filetemp = seeds + ('_%i' % blockno)
+				filetemp = seeds_file1 + ('_%i' % blockno)
 				raster_blck.save(filetemp)
 
 				# Maintain a list of saved temporary files
@@ -595,9 +603,9 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		# Mosaic temporary files
 		arcpy.AddMessage("Mosaic blocks")
 		arcpy.Mosaic_management(';'.join(tempfiles[1:]), tempfiles[0])
-		if arcpy.Exists(seeds):
-			arcpy.Delete_management(seeds)
-		arcpy.Rename_management(tempfiles[0], seeds)
+		if arcpy.Exists(seeds_file1):
+			arcpy.Delete_management(seeds_file1)
+		arcpy.Rename_management(tempfiles[0], seeds_file1)
 
 		# Remove temporary files
 		for fileitem in tempfiles:
@@ -607,30 +615,11 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		# Release raster objects from memory
 		del raster_blck
 		
-		#   noting that (x, y) is the lower left coordinate (in cells)
-		# sink_ext = arcpy.Describe(sinkLarge).extent
-		# cellsize = float(arcpy.GetRasterProperties_management(sinkLarge, 'CELLSIZEX').getOutput(0))
-		# nrows = int(arcpy.GetRasterProperties_management(sinkLarge, 'ROWCOUNT').getOutput(0))
-		# for r in range(1, nrows):
-			# ll = arcpy.Point(sink_ext.XMin, sink_ext.YMax - r * cellsize)
-			# sinkLargeRow = arcpy.RasterToNumPyArray(sinkLarge, ll, nrows=1)
-			# row_bool = np.in1d(sinkLargeRow, np.array(trueSinks))
-		
-		# arcpy.AddMessage("Flagging true sinks")
-		# with arcpy.da.UpdateCursor(sinkLarge, ['VALUE', 'true_sink']) as cursor:
-			# for row in cursor:
-				# if row[0] in trueSinks:
-					# row[1] = 1
-				# else:
-					# row[1] = 0
-				# cursor.updateRow(row)
-		# arcpy.AddMessage("Creating watershed seeds")		
-		# seeds = InList(sinkLarge, trueSinks)
-		
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		seeds2 = Con(seeds == 1, 1)
-		nonContributingAreas = Watershed(fdr, seeds2)
-		del seeds, seeds2, fdr
+		seeds2 = Con(Raster(seeds_file1) == 1, 1)
+		seeds2.save(seeds_file2)
+		nonContributingAreas = Watershed(fdr, Raster(seeds_file2))
+		del seeds2, fdr
 
 		arcpy.AddMessage("Saving output...")
 		arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
