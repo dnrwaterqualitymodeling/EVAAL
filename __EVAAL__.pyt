@@ -382,12 +382,19 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 
 	arcpy.AddMessage("Overlaying gSSURGO Hydrologic Soil Group...")
 	arcpy.Clip_analysis(gSSURGO + "/MUPOLYGON", watershedFile, clipSSURGO)
-	if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) < 6:
-		arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
-			, 'NAD_1983_To_HARN_Wisconsin')
-	else:
-		arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
-			, 'WGS_1984_(ITRF00)_To_NAD_1983 + NAD_1983_HARN_To_WGS_1984_2')
+	
+	from_sr = arcpy.Describe(clipSSURGO).spatialReference
+	to_sr = arcpy.Describe(demFile).spatialReference
+	sr_extent = arcpy.Describe(demFile).extent
+	transformations = arcpy.ListTransformations(from_sr, to_sr, sr_extent)
+	arcpy.Project_management(clipSSURGO, mapunits_prj, demFile, transformations[0])
+	
+	# if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) < 6:
+		# arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
+			# , 'NAD_1983_To_HARN_Wisconsin')
+	# else:
+		# arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
+			# , 'WGS_1984_(ITRF00)_To_NAD_1983 + NAD_1983_HARN_To_WGS_1984_2')
 	arcpy.JoinField_management(mapunits_prj, "MUKEY", gSSURGO + "/muaggatt" \
 		, "MUKEY", "hydgrpdcd")
 	arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
