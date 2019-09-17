@@ -609,7 +609,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		env.extent = demFile		
 		# Mosaic temporary files
 		arcpy.AddMessage("Mosaic blocks")
-		arcpy.Mosaic_management(';'.join(tempfiles[1:]), tempfiles[0])
+		if (len(tempfiles) > 1):
+			arcpy.Mosaic_management(';'.join(tempfiles[1:]), tempfiles[0])
 		if arcpy.Exists(seeds_file1):
 			arcpy.Delete_management(seeds_file1)
 		arcpy.Rename_management(tempfiles[0], seeds_file1)
