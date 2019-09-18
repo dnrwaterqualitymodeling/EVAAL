@@ -637,22 +637,32 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
 			, '', 'NEW_SELECTION')
 		arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
-		#Convert only those nonContributing watersheds that are in the target to rasters
-		#grid_code for 10.1 and gridcode for 10.2
-		if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
-			colNm = 'gridcode'
+		n_filtered = int(arcpy.GetCount_management(nonContribFiltered)[0])
+		if n_filtered == 0:
+			arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
+			
+			# Null raster being saved
+			null_out = SetNull(Raster(seeds_file2), Raster(seeds_file2), "Value IS NULL OR VALUE > 0")
+			null_out.save(nonContributingAreasFile)
+			
+			demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
 		else:
-			colNm = 'grid_code'
-		cs = arcpy.Describe(demFile).children[0].meanCellHeight
-		arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
-			, nonContribUngrouped, 'CELL_CENTER', '', cs)
-		noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
+			#Convert only those nonContributing watersheds that are in the target to rasters
+			#grid_code for 10.1 and gridcode for 10.2
+			if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
+				colNm = 'gridcode'
+			else:
+				colNm = 'grid_code'
+			cs = arcpy.Describe(demFile).children[0].meanCellHeight
+			arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
+				, nonContribUngrouped, 'CELL_CENTER', '', cs)
+			noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
 
-		grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
-		grouped.save(nonContributingAreasFile)
+			grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
+			grouped.save(nonContributingAreasFile)
 
-		demFinal = Con(IsNull(nonContributingAreasFile), demFile)
-		demFinal.save(demFinalFile)
+			demFinal = Con(IsNull(nonContributingAreasFile), demFile)
+			demFinal.save(demFinalFile)
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
