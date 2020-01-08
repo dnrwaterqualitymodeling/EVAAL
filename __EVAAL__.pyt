@@ -12,7 +12,7 @@ import subprocess
 import xml
 import json
 import math
-import request
+import requests
 import numpy as np
 from subprocess import Popen
 from arcpy import env
@@ -205,9 +205,9 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 		# asciiFile = tempDir + '/mw' + frequency + 'yr' + duration + 'ha.asc'
 		arcpy.AddMessage("Downloading " + prcpUrl + "...")
 		# urllib.urlretrieve(prcpUrl, asciiArchive)
-        r = requests.get(prcpUrl, allow_redirects=True)
-        open(asciiArchive, 'wb').write(r.content)
-        zf = zipfile.ZipFile(asciiArchive, 'r')
+		r = requests.get(prcpUrl, allow_redirects=True)
+		open(asciiArchive, 'wb').write(r.content)
+		zf = zipfile.ZipFile(asciiArchive, 'r')
 	else:
 		zf = zipfile.ZipFile(localCopy, 'r')
 		# asciiFile = tempDir + '/' + zf.namelist()[0].replace('zip', 'asc')
@@ -500,7 +500,7 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		sinkLarge.save(nonContributingAreasFile)
 		
 		demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
-	else:      
+	else:	  
 		arcpy.AddMessage("Calculating runoff...")
 		CN = Raster(cnFile)
 		prcpInches = Raster(prcpFile) / 1000.
@@ -647,7 +647,7 @@ def aggregateByElement(tableName, attField, elemField, wtField, stat):
 	wt = wt[inds]
 	attAve = np.zeros([len(np.unique(elem)),2], dtype=np.float)
 	for i,m in enumerate(np.unique(elem)):
-                ind = np.where(elem == m)
+		ind = np.where(elem == m)
 		if stat == 'wa':
 			attAve[i,0:2] = np.array(np.average(att[ind], weights=wt[ind], returned=True))
 		elif stat == 'top':
