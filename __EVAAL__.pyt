@@ -3,7 +3,7 @@ import os
 import random
 import sys
 import urllib
-import ftplib
+# import ftplib
 import zipfile
 import datetime
 import time
@@ -12,6 +12,7 @@ import subprocess
 import xml
 import json
 import math
+import request
 import numpy as np
 from subprocess import Popen
 from arcpy import env
@@ -187,24 +188,26 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 
 	if downloadBool == 'true':
 		# URL for ascii grid of the 10-year 24-hour rainfall event
-		ftpDir = 'ftp://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
-		prcpUrl = ftpDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
-		try:
-			ftp = ftplib.FTP('hdsc.nws.noaa.gov')
-		except:
-			arcpy.AddMessage('Your machine is not able to establish a connection to the Precipitation \
-				Frequency Data Server (PFDS) at NOAA. Either the server is down, or your internet \
-				connection is not allowing a direct connection. Please try again later to test if the \
-				server is down. Otherwise, try downloading from different internet connection.')
-			arcpy.AddMessage('The file you need is:')
-			arcpy.AddMessage(precpUrl)
-			arcpy.AddError()
+		httpsDir = 'https://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
+		prcpUrl = httpsDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
+		# try:
+			# ftp = ftplib.FTP('hdsc.nws.noaa.gov')
+		# except:
+			# arcpy.AddMessage('Your machine is not able to establish a connection to the Precipitation \
+				# Frequency Data Server (PFDS) at NOAA. Either the server is down, or your internet \
+				# connection is not allowing a direct connection. Please try again later to test if the \
+				# server is down. Otherwise, try downloading from different internet connection.')
+			# arcpy.AddMessage('The file you need is:')
+			# arcpy.AddMessage(precpUrl)
+			# arcpy.AddError()
 		# Download Prcp data, read data from archive, save backup
 		asciiArchive = tempDir + '/mw' + frequency + 'yr' + duration + 'ha.zip'
 		# asciiFile = tempDir + '/mw' + frequency + 'yr' + duration + 'ha.asc'
 		arcpy.AddMessage("Downloading " + prcpUrl + "...")
-		urllib.urlretrieve(prcpUrl, asciiArchive)
-		zf = zipfile.ZipFile(asciiArchive, 'r')
+		# urllib.urlretrieve(prcpUrl, asciiArchive)
+        r = requests.get(prcpUrl, allow_redirects=True)
+        open(asciiArchive, 'wb').write(r.content)
+        zf = zipfile.ZipFile(asciiArchive, 'r')
 	else:
 		zf = zipfile.ZipFile(localCopy, 'r')
 		# asciiFile = tempDir + '/' + zf.namelist()[0].replace('zip', 'asc')
