@@ -465,6 +465,14 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	nonContribRaw = tempGdb + '/nonContribRaw_' + rid
 	nonContribFiltered = tempGdb + '/nonContribFiltered_' + rid
 	nonContribUngrouped = tempGdb + '/nonContribUngrouped_' + rid
+	inc_runoff = tempGdb + '/inc_runoff_' + rid
+	cum_runoff = tempGdb + '/cum_runoff_' + rid
+	# cum_storage = tempGdb + '/cum_storage_' + rid
+	# cum_runoff2 = tempGdb + '/cum_runoff2_' + rid
+	# flow_out = tempGdb + '/flow_out_' + rid
+	sinkLarge_file = tempGdb + '/sink_large_' + rid
+	seeds_file1 = tempGdb + '/seeds_' + rid
+	seeds_file2 = tempGdb + '/seeds2_' + rid
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
@@ -489,6 +497,10 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 	meanPrecip = ZonalStatistics(sinkGroup, "Value", prcpMeters, "MEAN", "DATA")
 	# only grab those areas where the depth is greater than the precip, thus only the non contributing areas
 	sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
+	sinkLarge.save(sinkLarge_file)
+	arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
+	# arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
+	sinkLarge.save(sinkLarge_file)
 	del sinkDepth, sinkExtent, sinkGroup, maxDepth
 	
 	allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
@@ -508,12 +520,22 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		Ia = 0.2 * S
 		runoffDepth = (prcpInches - Ia)**2 / (prcpInches - Ia + S)
 		runoffVolume = (runoffDepth * 0.0254) * A
+		runoffVolume.save(inc_runoff)
+		arcpy.AddMessage("Computing flow direction")
 		fdr = FlowDirection(optimFillFile)
+		arcpy.AddMessage("Computing runoff accumulation")
 		runoffAcc = FlowAccumulation(fdr, runoffVolume, 'FLOAT')
-		del CN, S, Ia, runoffDepth
-
-		arcpy.AddMessage("Comparing runoff to sink capacity...")
-		arcpy.BuildRasterAttributeTable_management(sinkLarge, True)
+		runoffAcc.save(cum_runoff)
+		#### Tristan Nunez fix for sinks in series
+		# arcpy.AddMessage("Computing storage accumulation")
+		# storageAcc = FlowAccumulation(fdr, storageVolume, 'FLOAT')
+		# storageAcc.save(cum_storage)
+		# arcpy.AddMessage("Runoff minus storage")
+		# runoffAcc2 = runoffAcc - storageAcc
+		# runoffAcc2.save(cum_runoff2)
+		arcpy.AddMessage("Testing for sink capacity after storm")
+		
+		arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
 			#Grab the maximum amount of runoff for each sink
 		ZonalStatisticsAsTable(sinkLarge, "VALUE", runoffAcc, runoffTable, "DATA", "MAXIMUM")
 			#Grab the total of the storage volume for each sink
@@ -522,7 +544,8 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		arcpy.JoinField_management(runoffTable, 'VALUE', storageTable, 'VALUE')
 			# create new table, IF the total storage volume is greater than the max runoff
 		arcpy.TableSelect_analysis(runoffTable, trueSinkTable, '"SUM" > "MAX"')
-
+		del CN, S, Ia, runoffDepth
+		
 		trueSinkCount = int(arcpy.GetCount_management(trueSinkTable).getOutput(0))
 	
 		#if trueSinkCount > 0:
@@ -531,11 +554,74 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		for row in rows:
 			trueSinks.append(row[0])
 		del row, rows
+		trueSinks = np.array(trueSinks)
+		
+		# ArcGIS set membership reclass functions (Reclassify, InList) are very slow
+		# RasterToNumpyArray is used in blocks in an attempt to reduce computation time
+		
+		blocksize = 512
+			
+		xrng = range(0, sinkLarge.width, blocksize)
+		yrng = range(0, sinkLarge.height, blocksize)
+		
+		tempfiles = []
+		blockno = 0
+		arcpy.AddMessage("Blocking sinks grids for numpy set membership")
+		arcpy.ClearEnvironment("extent")
+		for x in xrng:
+			for y in yrng:
+				
+				# Lower left coordinate of block (in map units)
+				mx = sinkLarge.extent.XMin + x * sinkLarge.meanCellWidth
+				my = sinkLarge.extent.YMin + y * sinkLarge.meanCellHeight
+				# Upper right coordinate of block (in cells)
+				lx = min([x + blocksize, sinkLarge.width])
+				ly = min([y + blocksize, sinkLarge.height])
+				
+				blck = arcpy.RasterToNumPyArray(sinkLarge, arcpy.Point(mx, my), lx-x, ly-y)
+				blck_shp = blck.shape
+				blck = blck.flatten()
+				true_sink_blck = np.in1d(blck, trueSinks).astype(int)
+				true_sink_blck = np.reshape(true_sink_blck, blck_shp)
+				# true_sink_blck = np.isin(blck, trueSinks).astype(int)
+				# Convert data block back to raster
+				raster_blck = arcpy.NumPyArrayToRaster(
+					true_sink_blck,
+					arcpy.Point(mx, my),
+					sinkLarge.meanCellWidth,
+					sinkLarge.meanCellHeight
+				)
+				# Save on disk temporarily as 'filename_#.ext'
+				# filetemp = ('_%i.' % blockno).join(seeds.rsplit('.',1))
+				filetemp = seeds_file1 + ('_%i' % blockno)
+				raster_blck.save(filetemp)
 
+				# Maintain a list of saved temporary files
+				tempfiles.append(filetemp)
+				blockno += 1
+		
+		env.extent = demFile		
+		# Mosaic temporary files
+		arcpy.AddMessage("Mosaic blocks")
+		if (len(tempfiles) > 1):
+			arcpy.Mosaic_management(';'.join(tempfiles[1:]), tempfiles[0])
+		if arcpy.Exists(seeds_file1):
+			arcpy.Delete_management(seeds_file1)
+		arcpy.Rename_management(tempfiles[0], seeds_file1)
+
+		# Remove temporary files
+		for fileitem in tempfiles:
+			if arcpy.Exists(fileitem):
+				arcpy.Delete_management(fileitem)
+
+		# Release raster objects from memory
+		del raster_blck
+		
 		arcpy.AddMessage("Delineating watersheds of 'true' sinks...")
-		seeds = arcpy.sa.ExtractByAttributes(sinkLarge, 'VALUE IN ' + str(tuple(trueSinks)))
-		nonContributingAreas = Watershed(fdr, seeds)
-		del seeds, fdr
+		seeds2 = Con(Raster(seeds_file1) == 1, 1)
+		seeds2.save(seeds_file2)
+		nonContributingAreas = Watershed(fdr, Raster(seeds_file2))
+		del seeds2, fdr
 
 		arcpy.AddMessage("Saving output...")
 		arcpy.RasterToPolygon_conversion(nonContributingAreas, nonContribRaw, False, 'Value')
@@ -545,22 +631,32 @@ def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, wa
 		arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
 			, '', 'NEW_SELECTION')
 		arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
-		#Convert only those nonContributing watersheds that are in the target to rasters
-		#grid_code for 10.1 and gridcode for 10.2
-		if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
-			colNm = 'gridcode'
+		n_filtered = int(arcpy.GetCount_management(nonContribFiltered)[0])
+		if n_filtered == 0:
+			arcpy.AddWarning("No internally draining areas found. Returning null raster and original conditioned DEM.")
+			
+			# Null raster being saved
+			null_out = SetNull(Raster(seeds_file2), Raster(seeds_file2), "Value IS NULL OR VALUE > 0")
+			null_out.save(nonContributingAreasFile)
+			
+			demFinal = arcpy.CopyRaster_management(demFile, demFinalFile)
 		else:
-			colNm = 'grid_code'
-		cs = arcpy.Describe(demFile).children[0].meanCellHeight
-		arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
-			, nonContribUngrouped, 'CELL_CENTER', '', cs)
-		noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
+			#Convert only those nonContributing watersheds that are in the target to rasters
+			#grid_code for 10.1 and gridcode for 10.2
+			if int(arcpy.GetInstallInfo()['Version'].split('.')[1]) > 1:
+				colNm = 'gridcode'
+			else:
+				colNm = 'grid_code'
+			cs = arcpy.Describe(demFile).children[0].meanCellHeight
+			arcpy.PolygonToRaster_conversion(nonContribFiltered, colNm \
+				, nonContribUngrouped, 'CELL_CENTER', '', cs)
+			noId = Reclassify(nonContribUngrouped, "Value", RemapRange([[1,1000000000000000,1]]))
 
-		grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
-		grouped.save(nonContributingAreasFile)
+			grouped = RegionGroup(noId, 'EIGHT', '', 'NO_LINK')
+			grouped.save(nonContributingAreasFile)
 
-		demFinal = Con(IsNull(nonContributingAreasFile), demFile)
-		demFinal.save(demFinalFile)
+			demFinal = Con(IsNull(nonContributingAreasFile), demFile)
+			demFinal.save(demFinalFile)
 
 def demConditioningAfterInternallyDrainingAreas(demFile, nonContributingAreasFile, \
 	grassWaterwaysFile, optFillExe, outFile, tempDir, tempGdb):
