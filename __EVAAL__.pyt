@@ -215,7 +215,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 	asciiData = zf.read(zf.namelist()[0])
 	zf.close()
 	arcpy.AddMessage("Writing ASCII data to file...")
-	f = open(prcpAscii, 'w')
+	f = open(prcpAscii, 'wb')
 	f.write(asciiData)
 	f.close()
 	arcpy.AddMessage("Converting ASCII data to temporary raster...")
