@@ -251,7 +251,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 
 def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
     cts = np.array(coverTypeLookup[lc][scen])
-    hsg = map(str, hsg)
+    hsg = list(map(str, hsg))
     if len(cts) == 0:
         return None
     if scen == 'high':
@@ -259,7 +259,7 @@ def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
     else:
         hydCond = 'Good'
     coverBool = np.in1d(cnLookup['COVER_CODE'], cts)
-    scenBool = np.in1d(cnLookup['HYDROLOGIC_CONDITION'], [hydCond, ''])
+    scenBool = np.in1d(cnLookup['HYDROLOGIC_CONDITION'], np.array([hydCond, ''], dtype="|S25"))
     for ct in cts:
         ctBool = cnLookup['COVER_CODE'] == ct
         boolMat = np.vstack((coverBool,scenBool,ctBool))
