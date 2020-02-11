@@ -273,7 +273,7 @@ def queryCurveNumberLookup(lc, hsg, scen, coverTypeLookup, cnLookup):
 	return cn
 
 def downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid):
-	years = range(int(yrStart), int(yrEnd) + 1)
+	years = np.arange(int(yrStart), int(yrEnd) + 1).tolist()
 	cdlUrl = r'http://nassgeodata.gmu.edu:8080/axis2/services/CDLService/GetCDLFile?'
 	ext = arcpy.Describe(watershedCdlPrj).extent
 	ping = subprocess.call(['ping', '-n', '1', 'nassgeodata.gmu.edu'])
@@ -325,7 +325,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
 	rid = str(random.randint(10000,99999))
 
 	# Intermediate files
-	years = range(int(yrStart), int(yrEnd) + 1)
+	years = np.arange(int(yrStart), int(yrEnd) + 1).tolist()
 	watershedCdlPrj = tempGdb + '/watershedCdlPrj_' + rid
 	clipSSURGO = tempGdb + '/clipSSURGO_' + rid
 	samplePts = tempGdb + '/samplePts_' + rid
@@ -832,7 +832,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	if downloadBool == 'true':
 		arcpy.AddMessage("Downloading Cropland Data Layers...")
 		cdlTiffs = downloadCroplandDataLayer(yrStart, yrEnd, tempDir, watershedCdlPrj, rid)
-		years = range(int(yrStart), int(yrEnd) + 1)
+		years = np.arange(int(yrStart), int(yrEnd) + 1).tolist()
 	else:
 		arcpy.AddMessage("Clipping Cropland Data Layers to watershed extent...")
 		localCdlList = localCdlList.split(';')
@@ -864,7 +864,7 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
 	arcpy.AddMessage("Pulling crop sequence from Cropland Data Layers...")
 	ExtractMultiValuesToPoints(samplePts, cdlList, 'NONE')
 
-	nonRotCropVals = [0] + range(63,181) + range(182,204)
+	nonRotCropVals = [0] + np.arange(63,181).tolist() + np.arange(182,204).tolist()
 	corn = np.array([1])
 	alfalfa = np.array([28, 36, 37, 58])
 	pasture = np.array([62, 181, 176])
@@ -1327,7 +1327,7 @@ class createCurveNumberRaster(object):
 			parameterType="Optional",
 			direction="Input")
 		param1.filter.type = "ValueList"
-		param1.filter.list = range(2008,datetime.date.today().year - 1)
+		param1.filter.list = np.arange(2008,datetime.date.today().year - 1).tolist()
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
@@ -1337,7 +1337,7 @@ class createCurveNumberRaster(object):
 			parameterType="Optional",
 			direction="Input")
 		param2.filter.type = "ValueList"
-		param2.filter.list = range(2009,datetime.date.today().year)
+		param2.filter.list = np.arange(2009,datetime.date.today().year).tolist()
 		param2.value = datetime.date.today().year - 1
 
 		param3 = arcpy.Parameter(
@@ -1756,7 +1756,7 @@ class rasterizeCfactorForUsle(object):
 			parameterType="Optional",
 			direction="Input")
 		param1.filter.type = "ValueList"
-		param1.filter.list = range(2008,datetime.date.today().year - 1)
+		param1.filter.list = np.arange(2008,datetime.date.today().year - 1).tolist()
 		param1.value = 2009
 
 		param2 = arcpy.Parameter(
@@ -1766,7 +1766,7 @@ class rasterizeCfactorForUsle(object):
 			parameterType="Optional",
 			direction="Input")
 		param2.filter.type = "ValueList"
-		param2.filter.list = range(2009,datetime.date.today().year)
+		param2.filter.list = np.arange(2009,datetime.date.today().year).tolist()
 		param2.value = datetime.date.today().year - 1
 
 		param3 = arcpy.Parameter(
