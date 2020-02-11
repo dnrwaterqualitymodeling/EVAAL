@@ -947,35 +947,40 @@ def calculateCFactor(downloadBool, localCdlList, watershedFile, rasterTemplateFi
             rot = "No agriculture"
             c_s = np.empty(len(lcs))
             for j,lc in enumerate(lcs):
-                c = np.extract(cFactorXwalk['LAND_COVER'] == str(lc) \
-                    , cFactorXwalk['C_FACTOR'])
+                c = np.extract(cFactorXwalk['LAND_COVER'] == str(lc).encode(), cFactorXwalk['C_FACTOR'])
                 if len(c) > 0:
                     c_s[j] = c
                 else:
                     c_s[j] = np.nan
-            c_ave = np.nansum(c_s) / np.sum(np.isfinite(c_s))
-            if np.isnan(c_ave):
+            if np.all(np.isnan(c_s)):
                 c_high = None
                 c_low = None
             else:
-                c_high = float(c_ave)
-                c_low = float(c_ave)
+                c_ave = np.nansum(c_s) / np.sum(np.isfinite(c_s))
+                c_high = np.double(c_ave)
+                c_low = np.double(c_ave)
         if rot != "No agriculture" and rot != "No Data":
-            rotBool = cFactorXwalk['LAND_COVER'] == rot
-            highBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['High', '']))
-            lowBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['Low', '']))
+            rotBool = cFactorXwalk['LAND_COVER'] == rot.encode()
+            highBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['High', ''], dtype="|S25"))
+            lowBool = np.in1d(cFactorXwalk['SCENARIO'], np.array(['Low', ''], dtype="|S25"))
             c_high = np.extract(np.logical_and(rotBool, highBool), cFactorXwalk['C_FACTOR'])
             c_low = np.extract(np.logical_and(rotBool, lowBool), cFactorXwalk['C_FACTOR'])
+            c_high = c_high[0]
+            c_low = c_low[0]
+        # arcpy.AddMessage(rot)
+        # arcpy.AddMessage(c_high)
+        # arcpy.AddMessage(c_low)
+        if (c_high is not None):
             c_high = float(c_high)
+        if (c_low is not None):
             c_low = float(c_low)
-        row.cFactorHigh = c_high
-        row.cFactorLow = c_low
-        row.rotation = rot
+        row.setValue("cFactorHigh", c_high)
+        row.setValue("cFactorLow", c_low)
+        row.setValue("rotation", rot)
         rows.updateRow(row)
         arcpy.SetProgressorPosition()
     arcpy.ResetProgressor()
     del row, rows
-
     arcpy.AddMessage("Converting points to raster...")
     arcpy.PointToRaster_conversion(samplePts, "rotation", outRotation1, 'MOST_FREQUENT', \
         '', minResCdlTiff)
