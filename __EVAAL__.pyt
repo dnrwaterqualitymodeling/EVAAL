@@ -104,48 +104,42 @@ def setupTemp(tempDir, tempGdb):
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, \
 	tempDir, tempGdb):
 	setupTemp(tempDir,tempGdb)
-	
+
 	env.scratchWorkspace = wd + '/temp'
 	env.workspace = tempGdb
 	os.environ['ARCTMPDIR'] = tempDir
-	
-	if env.cellSize == 'MAXOF':
-		cellSize = 3
-	else:
-		cellSize = env.cellSize
 
 	rid = str(random.randint(111111, 999999))
 
 	# Intermediate Files
 	watershedBuffer = tempGdb + '/watershedBuffer_' + rid
 	lidarClip = tempGdb + "/lidarClip_" + rid
-	lidarResample = tempGdb + "/lidarResample_" + rid
-	lidarPt = tempGdb + "/lidarPt_" + rid
+	culverts_clip = tempGdb + "/culverts_clip" + rid
 	asciiDem = tempDir + "/dem_" + rid + ".asc"
 	asciiConditioned = tempDir + "/conditioned_" + rid + ".asc"
 
 	env.scratchWorkspace = tempDir
 	env.workspace = tempDir
 
-	lidarCellsize = arcpy.GetRasterProperties_management(lidarRaw, 'CELLSIZEX').getOutput(0)
 	arcpy.Buffer_analysis(watershedFile, watershedBuffer, '300 Feet')
 	arcpy.AddMessage("Clipping to watershed extent...")
 	arcpy.Clip_management(lidarRaw, "", lidarClip, watershedBuffer)
-	arcpy.AddMessage("Resampling and projecting to WTM/3m...")
-	arcpy.ProjectRaster_management(lidarClip, lidarResample, watershedBuffer, "BILINEAR", cellSize)
-	arcpy.AddMessage("Converting DEM to points...")
-	arcpy.RasterToPoint_conversion(lidarResample, lidarPt, "VALUE")
-
-	arcpy.AddMessage("Preparing inputs for TopoToRaster...")
-	ptElevFC = TopoPointElevation([[lidarPt, 'grid_code']])
-	boundaryFC = TopoBoundary([watershedBuffer])
-	culvertFC = TopoStream([culverts])
-	topoFCs = ([ptElevFC, boundaryFC, culvertFC])
-	ext = arcpy.Describe(watershedBuffer).extent
-
-	arcpy.AddMessage("Running TopoToRaster...")
-	ttr = TopoToRaster(topoFCs, cellSize, ext, 20, "", "", "ENFORCE", "SPOT", 40, 0.5, 1, 0, 0, 200)
-	ttr.save(demCondFile)
+	arcpy.AddMessage("Clipping culverts to watershed extent")
+	arcpy.Clip_analysis(culverts, watershedBuffer, culverts_clip)
+	arcpy.AddMessage("Rasterizing culverts...")
+	env.cellSize = arcpy.GetRasterProperties_management(lidarRaw, 'CELLSIZEX').getOutput(0)
+	env.snapRaster = lidarClip
+	env.extent = lidarClip
+	cul_ras = ZonalStatistics(
+		culverts_clip,
+		arcpy.Describe(culverts).OIDFieldName,
+		lidarClip,
+		"MINIMUM"
+	)
+	dem_culv_burn = Con(IsNull(cul_ras), lidarClip, cul_ras)
+	del cul_ras
+	dem_culv_burn.save(demCondFile)
+	del dem_culv_burn
 
 	arcpy.AddMessage("Converting to ASCII...")
 	arcpy.RasterToASCII_conversion(demCondFile, asciiDem)
@@ -166,7 +160,7 @@ def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, 
 	os.remove(asciiConditioned)
 	os.remove(asciiDem)
 
-	for dataset in [lidarClip, lidarResample, lidarPt]:
+	for dataset in [lidarClip, culverts_clip]:
 		arcpy.Delete_management(dataset)
 
 def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTemplateFile, outPrcp, \
