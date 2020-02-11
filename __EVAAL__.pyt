@@ -761,7 +761,7 @@ def makeTableFromAggregatedData(dataDict, tableFile):
     rows = arcpy.InsertCursor(tableFile)
     for i,m in enumerate(np.unique(dataDict['element'])):
         row = rows.newRow()
-        row.element = str(m)
+        row.element = str(m.decode())
         row.attAve = float(dataDict['attAve'][i,0])
         row.wt_sum = float(dataDict['attAve'][i,1])
         rows.insertRow(row)
