@@ -442,6 +442,7 @@ def calculateCurveNumber(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, wa
     arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
     arcpy.ProjectRaster_management(outCnHigh1, outCnHigh, wtm, 'BILINEAR', outRes)
 
+
 def identifyInternallyDrainingAreas(demFile, optimFillFile, prcpFile, cnFile, watershedFile, \
     nonContributingAreasFile, demFinalFile, tempDir, tempGdb):
 
