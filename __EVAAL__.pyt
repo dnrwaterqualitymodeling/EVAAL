@@ -2,8 +2,6 @@ import arcpy
 import os
 import random
 import sys
-# import urllib
-# import ftplib
 import zipfile
 import datetime
 import time
@@ -731,11 +729,16 @@ def aggregateByElement(tableName, attField, elemField, wtField, stat):
         att[i] = row[1]
         wt[i] = row[2]
     del i, row, rows
-    # Delete rows with nan values or weights equal to zero
+    # Delete rows with nan values
+    inds = np.invert((np.isnan(att) + np.isnan(wt)) > 0)
+    elem = elem[inds]
+    att = att[inds]
+    wt = wt[inds]
+    # If weighted average, exclude weights equal to zero, if top, anything below the first layer
     if stat == 'wa':
-        inds = np.invert((np.isnan(att) + np.isnan(wt) + (wt == 0)) > 0)
+        inds = np.invert(wt == 0)
     elif stat == 'top':
-        inds = np.invert((np.isnan(att) + np.isnan(wt) + (wt > 0)) > 0)
+        inds = np.invert(wt > 0)
     elem = elem[inds]
     att = att[inds]
     wt = wt[inds]
