@@ -5,7 +5,6 @@ import os
 import subprocess as sp
 
 def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, ws):
-    # Intermediate Files
     watershedBuffer = ws['tempGdb'] + '/watershedBuffer_' + ws['rid']
     lidarClip = ws['tempGdb'] + "/lidarClip_" + ws['rid']
     culverts_clip = ws['tempGdb'] + "/culverts_clip" + ws['rid']
