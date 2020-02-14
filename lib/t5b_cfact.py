@@ -4,7 +4,6 @@ from arcpy.sa import *
 import numpy as np
 import importlib
 import downloadCDL as dcdl
-importlib.reload(dcdl)
 
 def cfact(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\
     outRotation, outHigh, outLow, ws):

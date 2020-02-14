@@ -4,29 +4,17 @@ sys.path.append(wd + '/lib')
 
 import importlib
 import setup
-importlib.reload(setup)
 import parameterValidation as pv
-importlib.reload(pv)
 import t1_demConditioning as t1
-importlib.reload(t1)
 import t2a_preparePrecipData as t2a
-importlib.reload(t2a)
 import t2b_calculateCN as t2b
-importlib.reload(t2b)
 import t2c_identifyIDAs as t2c
-importlib.reload(t2c)
 import t3_demRecondition as t3
-importlib.reload(t3)
 import t4_spi as t4
-importlib.reload(t4)
 import t5a_kfact as t5a
-importlib.reload(t5a)
 import t5b_cfact as t5b
-importlib.reload(t5b)
 import t5c_usle as t5c
-importlib.reload(t5c)
 import t6_evi as t6
-importlib.reload(t6)
 
 import arcpy
 from arcpy import env
