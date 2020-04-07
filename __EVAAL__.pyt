@@ -2,6 +2,8 @@ import sys
 sys.path.append(sys.path[0] + '/lib')
 import toolClasses
 from toolClasses import *
+import arcpy
+arcpy.CheckExtension("Spatial")
 
 class Toolbox(object):
     def __init__(self):
