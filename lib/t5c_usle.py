@@ -10,7 +10,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
     env.extent = demFile
     env.mask = demFile
 
-    origRes = int(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
+    origRes = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 
     # Temp files
     resampleDemFile = ws['tempGdb'] +  "/resample"
