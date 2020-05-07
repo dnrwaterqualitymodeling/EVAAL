@@ -5,6 +5,7 @@ import random
 import shutil
 import subprocess as sp
 
+
 def setupWorkspace(wd):
     optFillExe = wd + '/etc/OptimizedPitRemoval.exe'
     cnLookupFile = wd + '/etc/curveNumberLookup.csv'
@@ -26,16 +27,16 @@ def setupWorkspace(wd):
     startupinfo = sp.STARTUPINFO()
     startupinfo.dwFlags |= sp.STARTF_USESHOWWINDOW
     ws = {
-        'optFillExe' : optFillExe,
-        'cnLookupFile' : cnLookupFile,
-        'legendFile' : legendFile,
-        'cFactorXwalkFile' : cFactorXwalkFile,
-        'coverTypeLookupFile' : coverTypeLookupFile,
-        'rotationSymbologyFile' : rotationSymbologyFile,
-        'tempDir' : tempDir,
-        'tempGdb' : tempGdb,
-        'rid' : rid,
-        'startupinfo' : startupinfo
+        'optFillExe': optFillExe,
+        'cnLookupFile': cnLookupFile,
+        'legendFile': legendFile,
+        'cFactorXwalkFile': cFactorXwalkFile,
+        'coverTypeLookupFile': coverTypeLookupFile,
+        'rotationSymbologyFile': rotationSymbologyFile,
+        'tempDir': tempDir,
+        'tempGdb': tempGdb,
+        'rid': rid,
+        'startupinfo': startupinfo
     }
     return ws
 

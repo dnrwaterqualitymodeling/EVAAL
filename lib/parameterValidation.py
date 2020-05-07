@@ -1,5 +1,6 @@
 import arcpy
 
+
 def checkForSpaces(parameters):
     for p in parameters:
         if p.value:
@@ -10,6 +11,7 @@ def checkForSpaces(parameters):
                     if ' ' in path:
                         p.setErrorMessage("Spaces are not allowed in dataset path.")
 
+
 def replaceSpacesWithUnderscores(parameters):
     for p in parameters:
         if p.value:
@@ -17,6 +19,7 @@ def replaceSpacesWithUnderscores(parameters):
                 if ' ' in p.value.value:
                     p.value = p.value.value.replace(' ', '_')
                     p.setWarningMessage('Spaces in file path were replaced with underscores.')
+
 
 def checkProjectionsOfInputs(parameters):
     for p in parameters:
@@ -28,6 +31,7 @@ def checkProjectionsOfInputs(parameters):
                     if cs not in ['NAD_1983_HARN_Transverse_Mercator', 'NAD_1983_HARN_Wisconsin_TM']:
                         p.setErrorMessage('Dataset must be projected in \
                             NAD_1983_HARN_Transverse_Mercator coordinate system.')
+
 
 def checkDupOutput(parameters):
     output_names = []
