@@ -69,8 +69,7 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
 
     arcpy.AddMessage("Overlaying gSSURGO Hydrologic Soil Group...")
     arcpy.Clip_analysis(gSSURGO + "/MUPOLYGON", watershedFile, clipSSURGO)
-    arcpy.Project_management(clipSSURGO, mapunits_prj, demFile\
-        , 'NAD_1983_To_HARN_Wisconsin')
+    arcpy.Project_management(clipSSURGO, mapunits_prj, demFile)
     arcpy.JoinField_management(mapunits_prj, "MUKEY", gSSURGO + "/muaggatt" \
         , "MUKEY", "hydgrpdcd")
     arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
@@ -112,8 +111,8 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
     del row, rows
 
     arcpy.AddMessage("Creating output rasters...")
-    arcpy.PointToRaster_conversion(joinSsurgo, "cnLow", outCnLow1, 'MOST_FREQUENT', \
-        '', minResCdlTiff)
+    arcpy.PointToRaster_conversion(joinSsurgo, "cnLow", outCnLow1, 'MOST_FREQUENT',
+                                   '', minResCdlTiff)
     arcpy.PointToRaster_conversion(joinSsurgo, "cnHigh", outCnHigh1, 'MOST_FREQUENT', \
         '', minResCdlTiff)
 
