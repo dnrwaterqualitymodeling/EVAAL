@@ -50,20 +50,28 @@ class conditionTheLidarDem(object):
             direction="Input")
 
         param3 = arcpy.Parameter(
+            displayName="Buffer size in meters",
+            name="buffer_size",
+            datatype="Long",
+            parameterType="Optional",
+            direction="Input")
+        param3.value = 100
+
+        param4 = arcpy.Parameter(
             displayName="Output conditioned DEM",
             name="output_conditioned_dem",
             datatype="Raster Layer",
             parameterType="Required",
             direction="Output")
 
-        param4 = arcpy.Parameter(
+        param5 = arcpy.Parameter(
             displayName="Output optimized fill",
             name="output_optimized_fill",
             datatype="Raster Layer",
             parameterType="Required",
             direction="Output")
 
-        parameters = [param0, param1, param2, param3, param4]
+        parameters = [param0, param1, param2, param3, param4, param5]
         return parameters
 
     def isLicensed(self):
@@ -89,8 +97,9 @@ class conditionTheLidarDem(object):
         culverts = parameters[0].valueAsText
         watershedFile = parameters[1].valueAsText
         lidarRaw = parameters[2].valueAsText
-        demCondFile = parameters[3].valueAsText
-        demOptimFillFile = parameters[4].valueAsText
+        bufferSize = parameters[3].value
+        demCondFile = parameters[4].valueAsText
+        demOptimFillFile = parameters[5].valueAsText
         
         ws = setup.setupWorkspace(wd)
         setup.setupTemp(ws['tempDir'], ws['tempGdb'])
@@ -98,7 +107,7 @@ class conditionTheLidarDem(object):
             culverts,
             watershedFile,
             lidarRaw,
-            ws['optFillExe'],
+            bufferSize,
             demCondFile,
             demOptimFillFile,
             ws

@@ -4,14 +4,15 @@ from arcpy.sa import *
 import os
 import subprocess as sp
 
-def demConditioning(culverts, watershedFile, lidarRaw, optFillExe, demCondFile, demOptimFillFile, ws):
+def demConditioning(culverts, watershedFile, lidarRaw, bufferSize, demCondFile, demOptimFillFile, ws):
     watershedBuffer = ws['tempGdb'] + '/watershedBuffer_' + ws['rid']
     lidarClip = ws['tempGdb'] + "/lidarClip_" + ws['rid']
     culverts_clip = ws['tempGdb'] + "/culverts_clip" + ws['rid']
     asciiDem = ws['tempDir'] + "/dem_" + ws['rid'] + ".asc"
     asciiConditioned = ws['tempDir'] + "/conditioned_" + ws['rid'] + ".asc"
 
-    arcpy.Buffer_analysis(watershedFile, watershedBuffer, '300 Feet')
+    buffer_str = str(bufferSize) + ' Meters'
+    arcpy.Buffer_analysis(watershedFile, watershedBuffer, buffer_str)
     arcpy.AddMessage("Clipping to watershed extent...")
     arcpy.Clip_management(lidarRaw, "", lidarClip, watershedBuffer)
     arcpy.AddMessage("Clipping culverts to watershed extent")
