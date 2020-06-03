@@ -13,7 +13,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
     origRes = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 
     # Temp files
-    resampleDemFile = ws['tempGdb'] +  "/resample"
+    resampleDemFile = ws['tempGdb'] + "/resample"
     resampleFillFile = ws['tempGdb'] + "/resampleFill"
     lsFile = ws['tempGdb'] + "/ls"
 
@@ -41,7 +41,7 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
     n = 1.3
     b0 = 0.09
     arcpy.AddMessage('Calculating slope/slope-length...')
-    LS10  =  (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
+    LS10 = (m+1)*((Am / a0)**m)*((Sin(br) / b0)**n)
     del a0, m, n, b0
     arcpy.Resample_management(LS10, lsFile, origRes, "BILINEAR")
     del LS10
@@ -56,7 +56,11 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
         R = float(erosivityConstant)
     K = Raster(kFactorFile)
     C = Raster(cFactorFile)
-    LS = Con(BooleanAnd(IsNull(lsFile),(Raster(demFile) > 0)), 0, lsFile)
+    LS = Con(
+        BooleanAnd(IsNull(lsFile), (Raster(demFile) > 0)),
+        0,
+        lsFile
+    )
 
     E = R * K * LS * C
 
