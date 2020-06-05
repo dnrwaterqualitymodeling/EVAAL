@@ -2,6 +2,7 @@ import arcpy
 import numpy as np
 import datetime
 import sys
+import importlib
 
 import setup
 import parameterValidation as pv
@@ -15,6 +16,19 @@ import t5a_kfact as t5a
 import t5b_cfact as t5b
 import t5c_usle as t5c
 import t6_evi as t6
+
+importlib.reload(setup)
+importlib.reload(pv)
+importlib.reload(t1)
+importlib.reload(t2a)
+importlib.reload(t2b)
+importlib.reload(t2c)
+importlib.reload(t3)
+importlib.reload(t4)
+importlib.reload(t5a)
+importlib.reload(t5b)
+importlib.reload(t5c)
+importlib.reload(t6)
 
 wd = sys.path[0]
 
@@ -969,43 +983,59 @@ class erosionScore(object):
             direction="Input")
 
         param2 = arcpy.Parameter(
+            displayName="Only calculate for agricultural land uses as identified by crop rotation raster?",
+            name="ag_subset_bool",
+            datatype="Boolean",
+            parameterType="Required",
+            direction="Input")
+        param2.value = 0
+
+        param3 = arcpy.Parameter(
+            displayName="Crop rotation raster",
+            name="rotation",
+            datatype="Raster Layer",
+            parameterType="Optional",
+            direction="Input")
+
+        param4 = arcpy.Parameter(
             displayName="Zonal statistic boundary feature class",
             name="zonal_boundary",
             datatype="Feature Layer",
             parameterType="Optional",
             direction="Input")
-        param2.filter.list = ["Polygon"]
+        param4.filter.list = ["Polygon"]
 
-        param3 = arcpy.Parameter(
+        param5 = arcpy.Parameter(
             displayName="Zonal statistic field",
             name="zonal_statistic_field",
             datatype="Field",
             parameterType="Optional",
             direction="Input")
-        param3.parameterDependencies = [param2.name]
+        param5.parameterDependencies = [param4.name]
 
-        param4 = arcpy.Parameter(
-            displayName="Conditioned DEM (for raster template)",
-            name="conditioned_dem",
-            datatype="Raster Layer",
-            parameterType="Required",
+        param6 = arcpy.Parameter(
+            displayName="Only calculate within zonal boundaries?",
+            name="zonal_subset_bool",
+            datatype="Boolean",
+            parameterType="Optional",
             direction="Input")
 
-        param5 = arcpy.Parameter(
+        param7 = arcpy.Parameter(
             displayName="Output erosion vulnerability index raster",
             name="erosion_score_raster",
             datatype="Raster Layer",
             parameterType="Optional",
             direction="Output")
 
-        param6 = arcpy.Parameter(
+        param8 = arcpy.Parameter(
             displayName="Output summary table",
             name="output_summary_table",
             datatype="Table",
             parameterType="Optional",
             direction="Output")
 
-        parameters = [param0, param1, param2, param3, param4, param5, param6]
+        parameters = [param0, param1, param2, param3, param4, param5, param6, param7, param8]
+        # parameters = [param0]
         return parameters
 
     def isLicensed(self):
@@ -1016,16 +1046,29 @@ class erosionScore(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        if parameters[2].value is not None:
-            parameters[3].enabled = 1
-            parameters[3].parameterType = "Required"
-            parameters[6].enabled = 1
-            parameters[6].parameterType = "Required"
-        else:
+        if parameters[2].value == 0:
             parameters[3].enabled = 0
             parameters[3].parameterType = "Optional"
+        else:
+            parameters[3].enabled = 1
+            parameters[3].parameterType = "Required"
+
+        if parameters[4].value is not None:
+            parameters[5].enabled = 1
+            parameters[5].parameterType = "Required"
+            parameters[6].enabled = 1
+            parameters[6].parameterType = "Required"
+            parameters[6].value = 1
+            parameters[8].enabled = 1
+            parameters[8].parameterType = "Required"
+        else:
+            parameters[5].enabled = 0
+            parameters[5].parameterType = "Optional"
             parameters[6].enabled = 0
             parameters[6].parameterType = "Optional"
+            parameters[6].value = 0
+            parameters[8].enabled = 0
+            parameters[8].parameterType = "Optional"
         pv.replaceSpacesWithUnderscores(parameters)
         return
 
@@ -1039,23 +1082,17 @@ class erosionScore(object):
 
     def execute(self, parameters, messages):
         #Inputs
-        usleFile = parameters[0].valueAsText
-        spiFile = parameters[1].valueAsText
-        zonalFile = parameters[2].valueAsText
-        zonalId = parameters[3].valueAsText
-        demFile = parameters[4].valueAsText
-        outErosionScoreFile = parameters[5].valueAsText
-        outSummaryTable = parameters[6].valueAsText
+        usle_file = parameters[0].valueAsText
+        spi_file = parameters[1].valueAsText
+        subset_ag = parameters[2].valueAsText
+        ag_file = parameters[3].valueAsText
+        zonal_file = parameters[4].valueAsText
+        zonal_id = parameters[5].valueAsText
+        subset_zone = parameters[6].valueAsText
+        out_raster = parameters[7].valueAsText
+        out_tbl = parameters[8].valueAsText
 
         ws = setup.setupWorkspace(wd)
         setup.setupTemp(ws['tempDir'], ws['tempGdb'])
-        t6.evi(
-            usleFile,
-            spiFile,
-            zonalFile,
-            zonalId,
-            demFile,
-            outErosionScoreFile,
-            outSummaryTable,
-            ws
-        )
+
+        t6.evi(usle_file, spi_file, subset_ag, ag_file, zonal_file, zonal_id, subset_zone, out_raster, out_tbl, ws)

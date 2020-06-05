@@ -1,52 +1,74 @@
 import arcpy
 from arcpy import env
 from arcpy.sa import *
+import numpy as np
+from scipy import stats
 
-def evi(usleFile, spiFile, zonalFile, zonalId, demFile, outErosionScoreFile, outSummaryTable, ws):
 
-    env.snapRaster = demFile
-    env.extent = demFile
-    env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
+def evi(usle_file, spi_file, subset_ag, ag_file, zonal_file, zonal_id, subset_zone, out_raster, out_tbl, ws):
+    template = Raster(usle_file)
+    env.snapRaster = template
+    env.extent = template
+    env.cellSize = template.meanCellHeight
 
-    arcpy.AddMessage("Converting zones to raster...")
-    if zonalId is None:
-        zonalId = 'OBJECTID'
-    if zonalFile is not None:
+    zonal_raster = ws['tempGdb'] + '/zonalRaster_' + ws['rid']
 
-        zonal = arcpy.PolygonToRaster_conversion(zonalFile, zonalId, ws['tempGdb'] + '/zonalRaster'\
-            , 'CELL_CENTER', '', demFile)
+    arcpy.AddMessage("Creating mask...")
+    if zonal_id is None:
+        zonal_id = 'OBJECTID'
+    if zonal_file is not None:
+        arcpy.PolygonToRaster_conversion(zonal_file, zonal_id, zonal_raster, 'CELL_CENTER', '', env.cellSize)
+        zonal_array = arcpy.RasterToNumPyArray(zonal_raster).flatten()
+    if ag_file is not None:
+        ag_array = arcpy.RasterToNumPyArray(
+            ag_file,
+            lower_left_corner=arcpy.Point(template.extent.XMin, template.extent.YMin),
+            ncols=template.width,
+            nrows=template.height
+        )
+        # 0s are null and 1 is 'no agriculture'
+        ag_array = np.in1d(ag_array, [0, 1], invert=True)
 
-        env.mask = ws['tempGdb'] + '/zonalRaster'
+    if subset_ag == 'true' and subset_zone == 'false':
+        mask = ag_array
+    elif subset_ag == 'false' and subset_zone == 'true':
+        mask = zonal_array > 0
+    elif subset_ag == 'true' and subset_zone == 'true':
+        mask = np.all([ag_array, zonal_array > 0], axis=0)
+    else:
+        mask = ag_array >= 0
+
+    if ag_file is not None:
+        del ag_array
 
     arcpy.AddMessage("Calculating summary statistics of soil loss and stream power index...")
-    lnUsle = Ln(Raster(usleFile) + 1)
-        # x 1 was added by T. Nelson on 2014-08-20
-        #    Arc was not able to calculate stats on (line 978)
-        #    this '*1' seems to work...for some reason
-    spi = Raster(spiFile)*1
+    usle = arcpy.RasterToNumPyArray(usle_file).flatten()
+    usle[mask] = stats.rankdata(usle[mask]) / len(usle[mask])
+    # usle = np.log10(usle + 1)
+    spi = arcpy.RasterToNumPyArray(spi_file).flatten()
+    spi[mask] = stats.rankdata(spi[mask]) / len(spi[mask])
+    # spi = np.log(spi + 1)
+    evi = usle + spi
 
-    arcpy.CalculateStatistics_management(spi)
-    arcpy.CalculateStatistics_management(lnUsle)
 
-    spiMean = float(arcpy.GetRasterProperties_management(spi, "MEAN").getOutput(0))
-    spiSd = float(arcpy.GetRasterProperties_management(spi, "STD").getOutput(0))
-    usleMean = float(arcpy.GetRasterProperties_management(lnUsle, "MEAN").getOutput(0))
-    usleSd = float(arcpy.GetRasterProperties_management(lnUsle, "STD").getOutput(0))
+    evi[mask] = ((evi[mask] - np.min(evi[mask])) * 3) / (np.max(evi[mask]) - np.min(evi[mask]))
 
-    arcpy.AddMessage("Calculating Z-scores...")
-    spiZ = (spi - spiMean) / spiSd
-    usleZ = (lnUsle - usleMean) / usleSd
-    arcpy.AddMessage("Calculating erosion vulnerability index...")
-    erosionScore = spiZ + usleZ
+    evi[np.invert(mask)] = -9999
+    evi = np.reshape(evi, (template.height, template.width))
+    evi_raster = arcpy.NumPyArrayToRaster(
+        evi,
+        lower_left_corner=arcpy.Point(template.extent.XMin, template.extent.YMin),
+        x_cell_size=template.meanCellHeight,
+        y_cell_size=template.meanCellHeight,
+        value_to_nodata=-9999
+    )
 
-    if outErosionScoreFile is not None:
-        erosionScore.save(outErosionScoreFile)
-    if zonalFile is not None:
+    if out_raster is not None:
+        evi_raster.save(out_raster)
+    if zonal_file is not None:
         arcpy.AddMessage("Summarizing erosion vulnerability index within zonal statistics feature class boundaries...")
-        fields = arcpy.ListFields(ws['tempGdb'] + '/zonalRaster')
+        fields = arcpy.ListFields(zonal_raster)
         if len(fields) == 3:
-            erosionScoreByClu = ZonalStatisticsAsTable(ws['tempGdb'] + '/zonalRaster', 'Value', erosionScore\
-                    , outSummaryTable, "DATA", "ALL")
+            ZonalStatisticsAsTable(zonal_raster, 'Value', evi_raster, out_tbl, "DATA", "ALL")
         else:
-            erosionScoreByClu = ZonalStatisticsAsTable(ws['tempGdb'] + '/zonalRaster', zonalId, erosionScore\
-                , outSummaryTable, "DATA", "ALL")
+            ZonalStatisticsAsTable(zonal_raster, zonal_id, evi_raster, out_tbl, "DATA", "ALL")

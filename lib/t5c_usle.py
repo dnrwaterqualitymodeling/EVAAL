@@ -3,8 +3,7 @@ from arcpy import env
 from arcpy.sa import *
 import math
 
-def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile, \
-    facThreshold, outFile, ws):
+def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFactorFile, facThreshold, outFile, ws):
 
     env.snapRaster = demFile
     env.extent = demFile
@@ -13,9 +12,9 @@ def usle(demFile, fillFile, erosivityFile, erosivityConstant, kFactorFile, cFact
     origRes = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
 
     # Temp files
-    resampleDemFile = ws['tempGdb'] + "/resample"
-    resampleFillFile = ws['tempGdb'] + "/resampleFill"
-    lsFile = ws['tempGdb'] + "/ls"
+    resampleDemFile = ws['tempGdb'] + "/resample_" + ws['rid']
+    resampleFillFile = ws['tempGdb'] + "/resampleFill_" + ws['rid']
+    lsFile = ws['tempGdb'] + "/ls" + ws['rid']
 
     # Resample the dem to 10-meter resolution (use linear interpolation resample method)
     arcpy.AddMessage("Resampling conditioned DEM...")
