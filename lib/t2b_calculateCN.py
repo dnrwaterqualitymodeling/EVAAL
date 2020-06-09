@@ -3,49 +3,43 @@ from arcpy import env
 from arcpy.sa import *
 import numpy as np
 import json
-import importlib
 import downloadCDL as dcdl
 import queryCN as qcn
+import importlib
+importlib.reload(dcdl)
+importlib.reload(qcn)
 
-def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFile, \
-    demFile, outCnLow, outCnHigh, ws):
+
+def calculateCN(download_bool, yr_start, yr_end, local_cdl, gssurgo, watershed, dem_cond, out_cn_low, out_cn_high, ws):
 
     # Intermediate files
-    years = np.arange(int(yrStart), int(yrEnd) + 1).tolist()
+    years = np.arange(int(yr_start), int(yr_end) + 1).tolist()
     watershedCdlPrj = ws['tempGdb'] + '/watershedCdlPrj_' + ws['rid']
     clipSSURGO = ws['tempGdb'] + '/clipSSURGO_' + ws['rid']
     samplePts = ws['tempGdb'] + '/samplePts_' + ws['rid']
     joinSsurgo = ws['tempGdb'] + '/joinSsurgo_' + ws['rid']
     mapunits_prj = ws['tempGdb'] + '/mapunits_prj_' + ws['rid']
-    outCnLow1 = ws['tempGdb'] + '/outCnLow1_' + ws['rid']
-    outCnHigh1 = ws['tempGdb'] + '/outCnHigh1_' + ws['rid']
+    out_cn_low1 = ws['tempGdb'] + '/out_cn_low1_' + ws['rid']
+    out_cn_high1 = ws['tempGdb'] + '/out_cn_high1_' + ws['rid']
 
     # Read in C-factor crosswalk table and CDL legend file
-    cnLookup = np.loadtxt(ws['cnLookupFile'] \
-        , dtype=[('COVER_CODE', 'i1') \
-            , ('COVER_TYPE', 'S60') \
-            , ('TREATMENT', 'S4') \
-            , ('HYDROLOGIC_CONDITION', 'S25') \
-            , ('A', 'i1') \
-            , ('B', 'i1') \
-            , ('C', 'i1') \
-            , ('D', 'i1')] \
-        , delimiter=',', skiprows=1)
+    dtypes = ['i1', 'S60', 'S4', 'S25', 'i1', 'i1', 'i1', 'i1']
+    cnLookup = np.genfromtxt(ws['cnLookupFile'], dtype=dtypes, delimiter=',', names=True)
     f = open(ws['coverTypeLookupFile'], 'r')
     coverTypeLookup = json.load(f)
     f.close()
     del f
     arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
     sr = arcpy.SpatialReference(102039)
-    arcpy.Project_management(watershedFile, watershedCdlPrj, sr, "NAD_1983_To_HARN_Wisconsin")
-    if downloadBool == 'true':
+    arcpy.Project_management(watershed, watershedCdlPrj, sr, "NAD_1983_To_HARN_Wisconsin")
+    if download_bool == 'true':
         arcpy.AddMessage("Downloading Cropland Data Layers...")
-        cdlTiffs = dcdl.downloadCDL(yrStart, yrEnd, ws['tempDir'], watershedCdlPrj, ws['rid'])
+        cdlTiffs = dcdl.downloadCDL(yr_start, yr_end, ws['tempDir'], watershedCdlPrj, ws['rid'])
     else:
-        localCdlList = localCdlList.split(';')
+        local_cdl = local_cdl.split(';')
         cdlTiffs = []
         years = []
-        for i,localCdl in enumerate(localCdlList):
+        for i,localCdl in enumerate(local_cdl):
             clipCdl = tempDir + '/cdl_' + str(i) + '_' + ws['rid'] + '.tif'
             arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj)
             cdlTiffs.append(clipCdl)
@@ -68,9 +62,9 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
     ExtractMultiValuesToPoints(samplePts, cdlList, 'NONE')
 
     arcpy.AddMessage("Overlaying gSSURGO Hydrologic Soil Group...")
-    arcpy.Clip_analysis(gSSURGO + "/MUPOLYGON", watershedFile, clipSSURGO)
-    arcpy.Project_management(clipSSURGO, mapunits_prj, demFile)
-    arcpy.JoinField_management(mapunits_prj, "MUKEY", gSSURGO + "/muaggatt" \
+    arcpy.Clip_analysis(gssurgo + "/MUPOLYGON", watershed, clipSSURGO)
+    arcpy.Project_management(clipSSURGO, mapunits_prj, dem_cond)
+    arcpy.JoinField_management(mapunits_prj, "MUKEY", gssurgo + "/muaggatt" \
         , "MUKEY", "hydgrpdcd")
     arcpy.SpatialJoin_analysis(samplePts, mapunits_prj, joinSsurgo, '' \
         , 'KEEP_COMMON', '', 'INTERSECT')
@@ -84,9 +78,9 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
     rows = arcpy.da.UpdateCursor(joinSsurgo, ['hydgrpdcd'] + yrCols + ['cnLow', 'cnHigh'])
     for row in rows:
         if row[0] is None:
-            hsg = ['A','B','C','D']
+            hsgs = ['A','B','C','D']
         else:
-            hsg = [str(row[0][0])]
+            hsgs = [str(row[0][0])]
         lcs = []
         for y in range(1,len(yrCols)+1):
             if row[y] is None:
@@ -97,7 +91,7 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
         cnsLow = []
         for lc in lcs:
             for scen, hydCond in zip(['low', 'high'], ['Good', 'Poor']):
-                cn = qcn.queryCN(lc, hsg, scen, coverTypeLookup, cnLookup)
+                cn = qcn.queryCN(lc, hsgs, scen, coverTypeLookup, cnLookup)
                 if scen == 'low' and cn is not None:
                     cnsLow.append(cn)
                 elif scen == 'high' and cn is not None:
@@ -111,16 +105,13 @@ def calculateCN(downloadBool, yrStart, yrEnd, localCdlList, gSSURGO, watershedFi
     del row, rows
 
     arcpy.AddMessage("Creating output rasters...")
-    arcpy.PointToRaster_conversion(joinSsurgo, "cnLow", outCnLow1, 'MOST_FREQUENT',
-                                   '', minResCdlTiff)
-    arcpy.PointToRaster_conversion(joinSsurgo, "cnHigh", outCnHigh1, 'MOST_FREQUENT', \
-        '', minResCdlTiff)
+    arcpy.PointToRaster_conversion(joinSsurgo, "cnLow", out_cn_low1, 'MOST_FREQUENT', '', minResCdlTiff)
+    arcpy.PointToRaster_conversion(joinSsurgo, "cnHigh", out_cn_high1, 'MOST_FREQUENT', '', minResCdlTiff)
 
-    env.snapRaster = demFile
-    env.cellSize = arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0)
-    env.mask = demFile
+    env.snapRaster = dem_cond
+    env.cellSize = Raster(dem_cond).meanCellHeight
+    env.mask = dem_cond
 
-    wtm = arcpy.Describe(demFile).spatialReference
-    outRes = float(arcpy.GetRasterProperties_management(demFile, 'CELLSIZEX').getOutput(0))
-    arcpy.ProjectRaster_management(outCnLow1, outCnLow, wtm, 'BILINEAR', outRes)
-    arcpy.ProjectRaster_management(outCnHigh1, outCnHigh, wtm, 'BILINEAR', outRes)
+    wtm = arcpy.Describe(dem_cond).spatialReference
+    arcpy.ProjectRaster_management(out_cn_low1, out_cn_low, wtm, 'BILINEAR', env.cellSize)
+    arcpy.ProjectRaster_management(out_cn_high1, out_cn_high, wtm, 'BILINEAR', env.cellSize)
