@@ -1,13 +1,14 @@
 import arcpy
 import numpy as np
 
-def aggregateSSURGO(tableName, attField, elemField, wtField, stat):
-    nRows = int(arcpy.GetCount_management(tableName).getOutput(0))
+
+def aggregateSSURGO(table_name, att_field, elem_field, wt_field, stat):
+    nRows = int(arcpy.GetCount_management(table_name).getOutput(0))
     elem = np.empty(nRows, dtype='S15')
     att = np.empty(nRows, dtype=np.float)
     wt = np.empty(nRows, dtype=np.float)
-    rows = arcpy.da.SearchCursor(tableName, [elemField,attField,wtField])
-    for i,row in enumerate(rows):
+    rows = arcpy.da.SearchCursor(table_name, [elem_field, att_field, wt_field])
+    for i, row in enumerate(rows):
         elem[i] = row[0]
         att[i] = row[1]
         wt[i] = row[2]

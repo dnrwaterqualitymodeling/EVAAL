@@ -969,72 +969,79 @@ class erosionScore(object):
 
     def getParameterInfo(self):
         param0 = arcpy.Parameter(
+            displayName="Watershed boundary (unbuffered)",
+            name="watershed",
+            datatype="Feature Layer",
+            parameterType="Required",
+            direction="Input"
+        )
+        param1 = arcpy.Parameter(
             displayName="Soil loss raster",
             name="soil_loss_raster",
             datatype="Raster Layer",
             parameterType="Required",
             direction="Input")
 
-        param1 = arcpy.Parameter(
+        param2 = arcpy.Parameter(
             displayName="Stream power index raster",
             name="stream_power_index_raster",
             datatype="Raster Layer",
             parameterType="Required",
             direction="Input")
 
-        param2 = arcpy.Parameter(
+        param3 = arcpy.Parameter(
             displayName="Only calculate for agricultural land uses as identified by crop rotation raster?",
             name="ag_subset_bool",
             datatype="Boolean",
             parameterType="Required",
             direction="Input")
-        param2.value = 0
+        param3.value = 0
 
-        param3 = arcpy.Parameter(
+        param4 = arcpy.Parameter(
             displayName="Crop rotation raster",
             name="rotation",
             datatype="Raster Layer",
             parameterType="Optional",
             direction="Input")
 
-        param4 = arcpy.Parameter(
+        param5 = arcpy.Parameter(
             displayName="Zonal statistic boundary feature class",
             name="zonal_boundary",
             datatype="Feature Layer",
             parameterType="Optional",
             direction="Input")
-        param4.filter.list = ["Polygon"]
+        param5.filter.list = ["Polygon"]
 
-        param5 = arcpy.Parameter(
+        param6 = arcpy.Parameter(
             displayName="Zonal statistic field",
             name="zonal_statistic_field",
             datatype="Field",
             parameterType="Optional",
             direction="Input")
-        param5.parameterDependencies = [param4.name]
+        param6.parameterDependencies = [param5.name]
 
-        param6 = arcpy.Parameter(
+        param7 = arcpy.Parameter(
             displayName="Only calculate within zonal boundaries?",
             name="zonal_subset_bool",
             datatype="Boolean",
             parameterType="Optional",
             direction="Input")
 
-        param7 = arcpy.Parameter(
+        param8 = arcpy.Parameter(
             displayName="Output erosion vulnerability index raster",
             name="erosion_score_raster",
             datatype="Raster Layer",
             parameterType="Optional",
             direction="Output")
 
-        param8 = arcpy.Parameter(
+        param9 = arcpy.Parameter(
             displayName="Output summary table",
             name="output_summary_table",
             datatype="Table",
             parameterType="Optional",
             direction="Output")
 
-        parameters = [param0, param1, param2, param3, param4, param5, param6, param7, param8]
+        parameters = [param0, param1, param2, param3, param4, param5, param6, param7, param8, param9]
         # parameters = [param0]
         return parameters
 
@@ -1046,29 +1053,29 @@ class erosionScore(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        if parameters[2].value == 0:
-            parameters[3].enabled = 0
-            parameters[3].parameterType = "Optional"
+        if parameters[3].value == 0:
+            parameters[4].enabled = 0
+            parameters[4].parameterType = "Optional"
         else:
-            parameters[3].enabled = 1
-            parameters[3].parameterType = "Required"
+            parameters[4].enabled = 1
+            parameters[4].parameterType = "Required"
 
-        if parameters[4].value is not None:
-            parameters[5].enabled = 1
-            parameters[5].parameterType = "Required"
+        if parameters[5].value is not None:
             parameters[6].enabled = 1
             parameters[6].parameterType = "Required"
-            parameters[6].value = 1
-            parameters[8].enabled = 1
-            parameters[8].parameterType = "Required"
+            parameters[7].enabled = 1
+            parameters[7].parameterType = "Required"
+            parameters[7].value = 1
+            parameters[9].enabled = 1
+            parameters[9].parameterType = "Required"
         else:
-            parameters[5].enabled = 0
-            parameters[5].parameterType = "Optional"
             parameters[6].enabled = 0
             parameters[6].parameterType = "Optional"
-            parameters[6].value = 0
-            parameters[8].enabled = 0
-            parameters[8].parameterType = "Optional"
+            parameters[7].enabled = 0
+            parameters[7].parameterType = "Optional"
+            parameters[7].value = 0
+            parameters[9].enabled = 0
+            parameters[9].parameterType = "Optional"
         pv.replaceSpacesWithUnderscores(parameters)
         return
 
@@ -1082,17 +1089,19 @@ class erosionScore(object):
 
     def execute(self, parameters, messages):
         #Inputs
-        usle_file = parameters[0].valueAsText
-        spi_file = parameters[1].valueAsText
-        subset_ag = parameters[2].valueAsText
-        ag_file = parameters[3].valueAsText
-        zonal_file = parameters[4].valueAsText
-        zonal_id = parameters[5].valueAsText
-        subset_zone = parameters[6].valueAsText
-        out_raster = parameters[7].valueAsText
-        out_tbl = parameters[8].valueAsText
+        watershed = parameters[0].valueAsText
+        usle_file = parameters[1].valueAsText
+        spi_file = parameters[2].valueAsText
+        subset_ag = parameters[3].valueAsText
+        ag_file = parameters[4].valueAsText
+        zonal_file = parameters[5].valueAsText
+        zonal_id = parameters[6].valueAsText
+        subset_zone = parameters[7].valueAsText
+        out_raster = parameters[8].valueAsText
+        out_tbl = parameters[9].valueAsText
 
         ws = setup.setupWorkspace(wd)
         setup.setupTemp(ws['tempDir'], ws['tempGdb'])
 
-        t6.evi(usle_file, spi_file, subset_ag, ag_file, zonal_file, zonal_id, subset_zone, out_raster, out_tbl, ws)
+        t6.evi(watershed, usle_file, spi_file, subset_ag, ag_file, zonal_file, zonal_id, subset_zone, out_raster,
+               out_tbl, ws)
