@@ -2,8 +2,8 @@ import arcpy
 from arcpy import env
 import aggregateSSURGO as agsur
 import makeSsurgoTable as mst
-# import importlib
-# importlib.reload(mst)
+import importlib
+importlib.reload(mst)
 
 def kfact(gssurgo, att_field, dem_file, watershed, out_raster, ws):
 

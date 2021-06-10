@@ -1,8 +1,8 @@
 import sys
 sys.path.append(sys.path[0] + '/lib')
 import toolClasses
-# import importlib
-# importlib.reload(toolClasses)
+import importlib
+importlib.reload(toolClasses)
 from toolClasses import *
 import arcpy
 arcpy.CheckExtension("Spatial")
