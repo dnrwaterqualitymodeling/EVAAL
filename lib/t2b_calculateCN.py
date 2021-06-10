@@ -40,7 +40,7 @@ def calculateCN(download_bool, yr_start, yr_end, local_cdl, gssurgo, watershed, 
         cdlTiffs = []
         years = []
         for i,localCdl in enumerate(local_cdl):
-            clipCdl = tempDir + '/cdl_' + str(i) + '_' + ws['rid'] + '.tif'
+            clipCdl = ws['tempDir'] + '/cdl_' + str(i) + '_' + ws['rid'] + '.tif'
             arcpy.Clip_management(localCdl, '', clipCdl, watershedCdlPrj)
             cdlTiffs.append(clipCdl)
             years.append(i)
