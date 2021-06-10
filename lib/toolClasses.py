@@ -357,7 +357,7 @@ class createCurveNumberRaster(object):
         outCnHigh = parameters[7].valueAsText
         outCnLow = parameters[8].valueAsText
         
-        ws = setup.setupWorkspace(wd)
+        ws = setup.setupWorkspace(sys.path[0])
         setup.setupTemp(ws['tempDir'], ws['tempGdb'])
         t2b.calculateCN(
             downloadBool,
