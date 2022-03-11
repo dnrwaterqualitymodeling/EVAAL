@@ -2,7 +2,7 @@ import arcpy
 from arcpy import env
 from arcpy.sa import *
 import numpy as np
-import importlib
+# import importlib
 import downloadCDL as dcdl
 
 def cfact(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart, yrEnd,\

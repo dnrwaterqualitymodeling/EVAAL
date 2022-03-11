@@ -5,9 +5,9 @@ import numpy as np
 import json
 import downloadCDL as dcdl
 import queryCN as qcn
-import importlib
-importlib.reload(dcdl)
-importlib.reload(qcn)
+# import importlib
+# importlib.reload(dcdl)
+# importlib.reload(qcn)
 
 
 def calculateCN(download_bool, yr_start, yr_end, local_cdl, gssurgo, watershed, dem_cond, out_cn_low, out_cn_high, ws):
