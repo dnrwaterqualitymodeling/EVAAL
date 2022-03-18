@@ -42,8 +42,6 @@ def identifyIDAs(demFile, optimFillFile, prcpFile, cnFile, watershedFile, \
     sinkLarge = Con(maxDepth > meanPrecip, sinkGroup)
     sinkLarge.save(sinkLarge_file)
     arcpy.BuildRasterAttributeTable_management(sinkLarge, "Overwrite")
-    # arcpy.AddField_management(sinkLarge, "true_sink", "SHORT")
-    sinkLarge.save(sinkLarge_file)
     del sinkDepth, sinkExtent, sinkGroup, maxDepth
     
     allnoDat = int(arcpy.GetRasterProperties_management(sinkLarge, 'ALLNODATA').getOutput(0))
