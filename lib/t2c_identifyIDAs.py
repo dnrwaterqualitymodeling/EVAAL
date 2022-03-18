@@ -162,7 +162,7 @@ def identifyIDAs(demFile, optimFillFile, prcpFile, cnFile, watershedFile, \
         arcpy.MakeFeatureLayer_management(nonContribRaw, 'nonContribRaw_layer')
         arcpy.MakeFeatureLayer_management(watershedFile, 'watershed_layer')
         # To select those nonContributing watersheds that are within the target watershed
-        arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'WITHIN', 'watershed_layer'\
+        arcpy.SelectLayerByLocation_management('nonContribRaw_layer', 'INTERSECT', 'watershed_layer'\
             , '', 'NEW_SELECTION')
         arcpy.CopyFeatures_management('nonContribRaw_layer', nonContribFiltered)
         n_filtered = int(arcpy.GetCount_management(nonContribFiltered)[0])
