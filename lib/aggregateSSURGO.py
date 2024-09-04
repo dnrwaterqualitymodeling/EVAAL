@@ -1,12 +1,17 @@
 import arcpy
 import numpy as np
+from packaging.version import Version
 
 
 def aggregateSSURGO(table_name, att_field, elem_field, wt_field, stat):
     nRows = int(arcpy.GetCount_management(table_name).getOutput(0))
     elem = np.empty(nRows, dtype='S15')
-    att = np.empty(nRows, dtype=np.float)
-    wt = np.empty(nRows, dtype=np.float)
+    if Version(np.version.version) < Version('1.20'):
+      att = np.empty(nRows, dtype=np.float)
+      wt = np.empty(nRows, dtype=np.float)
+    else:
+      att = np.empty(nRows, dtype=float)
+      wt = np.empty(nRows, dtype=float)
     rows = arcpy.da.SearchCursor(table_name, [elem_field, att_field, wt_field])
     for i, row in enumerate(rows):
         elem[i] = row[0]
@@ -26,7 +31,10 @@ def aggregateSSURGO(table_name, att_field, elem_field, wt_field, stat):
     elem = elem[inds]
     att = att[inds]
     wt = wt[inds]
-    attAve = np.zeros([len(np.unique(elem)),2], dtype=np.float)
+    if Version(np.version.version) < Version('1.20'):
+      attAve = np.zeros([len(np.unique(elem)),2], dtype=np.float)
+    else:
+      attAve = np.zeros([len(np.unique(elem)),2], dtype=float)
     for i,m in enumerate(np.unique(elem)):
         ind = np.where(elem == m)
         if stat == 'wa':
