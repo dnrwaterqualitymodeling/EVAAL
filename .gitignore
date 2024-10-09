@@ -10,3 +10,8 @@ temp/log
 *.pyc
 __pycache__
 __pycache__/*
+.Rproj.user
+.prj
+.Rhistory
+log
+repo.Rproj
