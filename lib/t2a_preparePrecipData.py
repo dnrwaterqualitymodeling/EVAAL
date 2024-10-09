@@ -11,13 +11,13 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
     prcpPrjFile = ws['tempGdb'] + '/prcpPrj_' + ws['rid']
     prcpAscii = ws['tempDir'] + '/prcpRaw_' + ws['rid'] + '.asc'
 
-    transformation = 'NAD_1983_To_HARN_Wisconsin'
+    # transformation = 'NAD_1983_To_HARN_Wisconsin'
 
     if downloadBool == 'true':
         # URL for ascii grid of the 10-year 24-hour rainfall event
-        httpsDir = 'https://hdsc.nws.noaa.gov/pub/hdsc/data/mw/'
-        prcpUrl = httpsDir + 'mw' + frequency + 'yr' + duration + 'ha.zip'
-        asciiArchive = ws['tempDir'] + '/mw' + frequency + 'yr' + duration + 'ha.zip'
+        httpsDir = 'https://hdsc.nws.noaa.gov/pub/hdsc/data/inw/'
+        prcpUrl = httpsDir + 'inw' + frequency + 'yr' + duration + 'ha.zip'
+        asciiArchive = ws['tempDir'] + '/inw' + frequency + 'yr' + duration + 'ha.zip'
         arcpy.AddMessage("Downloading " + prcpUrl + "...")
         r = requests.get(prcpUrl, allow_redirects=True)
         open(asciiArchive, 'wb').write(r.content)
@@ -47,8 +47,7 @@ def preparePrecipData(downloadBool, frequency, duration, localCopy, rasterTempla
 
     arcpy.AddMessage("Projecting and regridding frequency-duration raster to DEM grid domain...")
 
-    arcpy.ProjectRaster_management(prcpFileClp, prcpPrjFile, rasterTemplateFile, 'BILINEAR'\
-        , clSz, transformation)
+    arcpy.ProjectRaster_management(prcpFileClp, prcpPrjFile, rasterTemplateFile, 'BILINEAR', clSz)
     arcpy.AddMessage('Finished projecting')
     env.snapRaster = rasterTemplateFile
     rasterTemplate = Raster(rasterTemplateFile)

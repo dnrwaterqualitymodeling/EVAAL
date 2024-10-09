@@ -6,6 +6,7 @@ import importlib
 
 import setup
 import parameterValidation as pv
+importlib.reload(pv)
 import t1_demConditioning as t1
 import t2a_preparePrecipData as t2a
 import t2b_calculateCN as t2b
@@ -20,15 +21,15 @@ import t6_evi as t6
 # importlib.reload(setup)
 # importlib.reload(pv)
 # importlib.reload(t1)
-# importlib.reload(t2a)
-# importlib.reload(t2b)
+importlib.reload(t2a)
+importlib.reload(t2b)
 # importlib.reload(t2c)
 # importlib.reload(t3)
 # importlib.reload(t4)
-# importlib.reload(t5a)
+importlib.reload(t5a)
 # importlib.reload(t5b)
 # importlib.reload(t5c)
-# importlib.reload(t6)
+importlib.reload(t6)
 
 wd = sys.path[0]
 

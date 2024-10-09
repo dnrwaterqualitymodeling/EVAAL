@@ -40,9 +40,9 @@ def evi(watershed, usle_file, spi_file, subset_ag, ag_file, zonal_file, zonal_id
             nrows=template.height,
             nodata_to_value=-9999
         )
-        # Cell values of 0 are null and 1 is 'no agriculture'
+        # Cell values of 0 are null and 4 is 'no agriculture'
         # True is agriculture, False is no agriculture
-        ag_array = np.in1d(ag_array, [-9999, 1], invert=True)
+        ag_array = np.in1d(ag_array, [-9999, 4], invert=True)
 
     usle = arcpy.RasterToNumPyArray(usle_file, nodata_to_value=-9999).flatten()
     usle_bool = np.logical_and(usle != -9999, watershed_array)

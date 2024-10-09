@@ -31,7 +31,8 @@ def calculateCN(download_bool, yr_start, yr_end, local_cdl, gssurgo, watershed, 
     del f
     arcpy.AddMessage("Projecting Area Of Interest to Cropland Data Layer projection...")
     sr = arcpy.SpatialReference(102039)
-    arcpy.Project_management(watershed, watershedCdlPrj, sr, "NAD_1983_To_HARN_Wisconsin")
+    # arcpy.Project_management(watershed, watershedCdlPrj, sr, "NAD_1983_To_HARN_Wisconsin")
+    arcpy.Project_management(watershed, watershedCdlPrj, sr)
     if download_bool == 'true':
         arcpy.AddMessage("Downloading Cropland Data Layers...")
         cdlTiffs = dcdl.downloadCDL(yr_start, yr_end, ws['tempDir'], watershedCdlPrj, ws['rid'])
