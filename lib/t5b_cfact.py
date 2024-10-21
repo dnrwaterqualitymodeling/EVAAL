@@ -58,7 +58,7 @@ def cfact(downloadBool, localCdlList, watershedFile, rasterTemplateFile, yrStart
     alfalfa = np.array([28, 36, 37, 58])
     pasture = np.array([62, 181, 176])
     soyAndGrain = np.array([4,5,21,22,23,24,25,27,29,30,39,205])
-    potatoes = np.array([43])
+    potatoes = np.array([41,43])
     veggies = np.array([12,42,47,49,50,53,206,216])
 
     # Read in C-factor crosswalk table and CDL legend file
