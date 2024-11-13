@@ -6,4 +6,16 @@ temp/scratch.gdb/*
 temp/scratch/*
 temp/info/*
 temp/log
+<<<<<<< HEAD
 .Rproj.user
+=======
+.idea/*
+*.pyc
+__pycache__
+__pycache__/*
+.Rproj.user
+.prj
+.Rhistory
+log
+repo.Rproj
+>>>>>>> modularization
